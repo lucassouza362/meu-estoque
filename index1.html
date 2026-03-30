@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockOS — Sistema de Estoque</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3d;
+    --accent: #6c63ff;
+    --accent2: #00e5a0;
+    --danger: #ff4d6d;
+    --warn: #ffb703;
+    --text: #e8e8f0;
+    --muted: #6b6b85;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999;
+  }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+  }
+  #auth-screen::before {
+    content: '';
+    position: absolute;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(108,99,255,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  #auth-screen::after {
+    content: '';
+    position: absolute;
+    bottom: -200px; right: -200px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,229,160,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    z-index: 1;
+    animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .logo-text {
+    font-family: var(--font-head);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo-text span { color: var(--accent2); }
+
+  .auth-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 28px;
+  }
+  .auth-tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .auth-tab.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .form-group { margin-bottom: 16px; }
+  .form-label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .form-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--muted); }
+
+  .btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font-head);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    letter-spacing: 0.3px;
+  }
+  .btn-primary:hover { background: #7c74ff; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-google {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 400;
+    margin-top: 12px;
+  }
+  .btn-google:hover { border-color: var(--accent); }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--border);
+  }
+
+  .msg {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .msg.show { display: block; }
+  .msg.success { background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.3); color: var(--accent2); }
+  .msg.error { background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.3); color: var(--danger); }
+  .msg.info { background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.3); color: var(--accent); }
+
+  .note {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 20px;
+    line-height: 1.6;
+  }
+  .note a { color: var(--accent); text-decoration: none; }
+
+  /* ── 2FA SCREEN ── */
+  #twofa-screen {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; display: none;
+  }
+  .otp-inputs {
+    display: flex; gap: 10px; justify-content: center;
+    margin: 20px 0;
+  }
+  .otp-input {
+    width: 48px; height: 56px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+    font-family: var(--font-head);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .otp-input:focus { border-color: var(--accent); }
+
+  /* ── APP ── */
+  #app-screen { display: none; }
+
+  .topbar {
+    height: 60px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-logo {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.5px;
+  }
+  .topbar-logo span { color: var(--accent2); }
+  .topbar-right {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .user-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .user-badge:hover { border-color: var(--accent); }
+  .avatar {
+    width: 26px; height: 26px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff;
+    font-family: var(--font-head);
+  }
+  .btn-logout {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+
+  .main {
+    padding: 32px 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .page-title {
+    font-family: var(--font-head);
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .page-title small {
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    margin-top: 2px;
+  }
+
+  /* STATS */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--accent); }
+  .stat-label {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .stat-val {
+    font-family: var(--font-head);
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+  }
+  .stat-val.green { color: var(--accent2); }
+  .stat-val.red { color: var(--danger); }
+  .stat-val.yellow { color: var(--warn); }
+
+  /* TABLE */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .card-title {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .search-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    outline: none;
+    width: 220px;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .btn-add {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    padding: 8px 16px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .btn-add:hover { background: #7c74ff; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    text-align: left;
+    padding: 12px 20px;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+  td {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(42,42,61,0.5);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .badge-ok { background: rgba(0,229,160,0.12); color: var(--accent2); }
+  .badge-low { background: rgba(255,183,3,0.12); color: var(--warn); }
+  .badge-out { background: rgba(255,77,109,0.12); color: var(--danger); }
+
+  .btn-edit, .btn-del {
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-edit { background: var(--surface2); color: var(--text); margin-right: 4px; }
+  .btn-edit:hover { background: rgba(108,99,255,0.2); color: var(--accent); }
+  .btn-del { background: transparent; color: var(--muted); }
+  .btn-del:hover { color: var(--danger); background: rgba(255,77,109,0.1); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 24px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 32px;
+    width: 100%;
+    max-width: 400px;
+    animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+  }
+  .modal-title {
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 24px;
+  }
+  .modal-footer {
+    display: flex; gap: 10px; margin-top: 24px;
+  }
+  .btn-cancel {
+    flex: 1;
+    padding: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .btn-cancel:hover { border-color: var(--danger); }
+  .btn-save {
+    flex: 2;
+    padding: 11px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: var(--font-head);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-save:hover { background: #7c74ff; }
+
+  /* SUPABASE CONFIG BANNER */
+  .config-banner {
+    background: rgba(108,99,255,0.1);
+    border: 1px dashed var(--accent);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+    display: none;
+  }
+  .config-banner.show { display: block; }
+  .config-banner strong { color: var(--accent2); }
+  .config-banner code {
+    background: var(--surface2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  /* empty */
+  .empty-row td {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  @media (max-width: 600px) {
+    .auth-card { padding: 32px 24px; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .search-input { width: 100%; }
+    .card-header { flex-direction: column; align-items: flex-start; }
+    th:nth-child(3), td:nth-child(3),
+    th:nth-child(5), td:nth-child(5) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ AUTH SCREEN ══════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="logo">
+      <div class="logo-icon">📦</div>
+      <div class="logo-text">Stock<span>OS</span></div>
+    </div>
+
+    <div id="msg-auth" class="msg"></div>
+
+    <!-- CONFIG BANNER -->
+    <div id="config-banner" class="config-banner show">
+      ⚙️ <strong>Configure o Supabase:</strong> Edite o arquivo e substitua
+      <code>SEU_SUPABASE_URL</code> e <code>SEU_SUPABASE_ANON_KEY</code> pelas
+      suas credenciais em <strong>supabase.io</strong> para ativar autenticação real.
+      <br>Por ora, use o modo demo: e-mail <code><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4024252d2f00252d30322533216e232f2d">[email&#160;protected]</a></code> / senha <code>Demo@1234</code>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Entrar</button>
+      <button class="auth-tab" onclick="switchTab('register')">Cadastrar</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="tab-login">
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <input id="login-email" class="form-input" type="email" placeholder="seu@empresa.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input id="login-password" class="form-input" type="password" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary" onclick="handleLogin()">Entrar →</button>
+
+      <div class="divider">ou continue com</div>
+
+      <button class="btn btn-google" onclick="handleGoogle()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continuar com Google
+      </button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="tab-register" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Nome completo</label>
+        <input id="reg-name" class="form-input" type="text" placeholder="João Silva">
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <input id="reg-email" class="form-input" type="email" placeholder="seu@empresa.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input id="reg-password" class="form-input" type="password" placeholder="Mín. 8 caracteres">
+      </div>
+      <button class="btn btn-primary" onclick="handleRegister()">Criar conta →</button>
+    </div>
+
+    <p class="note">Ao continuar, você concorda com os <a href="#">Termos de Uso</a> e a <a href="#">Política de Privacidade</a>.</p>
+  </div>
+</div>
+
+<!-- ══════════════ 2FA SCREEN ══════════════ -->
+<div id="twofa-screen">
+  <div class="auth-card">
+    <div class="logo">
+      <div class="logo-icon">🔐</div>
+      <div class="logo-text">Stock<span>OS</span></div>
+    </div>
+    <div id="msg-2fa" class="msg"></div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6">
+      Um código de 6 dígitos foi enviado para o seu e-mail. Insira abaixo para confirmar o acesso.
+    </p>
+    <div class="otp-inputs">
+      <input class="otp-input" type="text" maxlength="1" id="otp0" oninput="otpMove(this,1)" onkeydown="otpBack(event,0)">
+      <input class="otp-input" type="text" maxlength="1" id="otp1" oninput="otpMove(this,2)" onkeydown="otpBack(event,1)">
+      <input class="otp-input" type="text" maxlength="1" id="otp2" oninput="otpMove(this,3)" onkeydown="otpBack(event,2)">
+      <input class="otp-input" type="text" maxlength="1" id="otp3" oninput="otpMove(this,4)" onkeydown="otpBack(event,3)">
+      <input class="otp-input" type="text" maxlength="1" id="otp4" oninput="otpMove(this,5)" onkeydown="otpBack(event,4)">
+      <input class="otp-input" type="text" maxlength="1" id="otp5" oninput="otpDone()" onkeydown="otpBack(event,5)">
+    </div>
+    <button class="btn btn-primary" onclick="verify2FA()">Verificar código →</button>
+    <p class="note" style="margin-top:16px">
+      Não recebeu? <a href="#" onclick="resend2FA()">Reenviar código</a>
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════ APP ══════════════ -->
+<div id="app-screen">
+  <div class="topbar">
+    <div class="topbar-logo">Stock<span>OS</span></div>
+    <div class="topbar-right">
+      <div class="user-badge">
+        <div class="avatar" id="user-avatar">JS</div>
+        <span id="user-name">Usuário</span>
+      </div>
+      <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="page-header">
+      <div class="page-title">
+        Estoque
+        <small id="last-update">Atualizado agora</small>
+      </div>
+    </div>
+
+    <div class="stats" id="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total de itens</div>
+        <div class="stat-val" id="stat-total">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Em estoque</div>
+        <div class="stat-val green" id="stat-ok">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Estoque baixo</div>
+        <div class="stat-val yellow" id="stat-low">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sem estoque</div>
+        <div class="stat-val red" id="stat-out">0</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Produtos</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <input class="search-input" type="text" placeholder="🔍 Buscar produto..." oninput="renderTable(this.value)">
+          <button class="btn-add" onclick="openModal()">+ Novo produto</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th>SKU</th>
+              <th>Qtd.</th>
+              <th>Preço unit.</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL ══════════════ -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Novo produto</div>
+    <div class="form-group">
+      <label class="form-label">Nome do produto</label>
+      <input id="p-name" class="form-input" type="text" placeholder="Ex: Caneta BIC Azul">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Categoria</label>
+      <input id="p-cat" class="form-input" type="text" placeholder="Ex: Papelaria">
+    </div>
+    <div class="form-group">
+      <label class="form-label">SKU</label>
+      <input id="p-sku" class="form-input" type="text" placeholder="Ex: PEN-001">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">Quantidade</label>
+        <input id="p-qty" class="form-input" type="number" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Preço unit. (R$)</label>
+        <input id="p-price" class="form-input" type="number" placeholder="0.00" step="0.01">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveProduct()">Salvar produto</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ SUPABASE SDK ══════════════ -->
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ─────────────────────────────────────────────────
+//  🔧 CONFIGURAÇÃO — substitua pelas suas credenciais
+//     Crie conta gratuita em: https://supabase.io
+// ─────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://fsdfdrmrmptccudeesbk.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzZGZkcm1ybXB0Y2N1ZGVlc2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODQxMTcsImV4cCI6MjA5MDQ2MDExN30.umM8-OG15FUSZ4YCq8MKLWyiasQunq2LX5tceE1hszI';
+
+const DEMO_EMAIL    = 'demo@empresa.com';
+const DEMO_PASSWORD = 'Demo@1234';
+
+// ─────────────────────────────────────────────────
+// Detecta se Supabase está configurado
+// ─────────────────────────────────────────────────
+const supabaseReady = SUPABASE_URL !== 'SEU_SUPABASE_URL';
+let supabase = null;
+if (supabaseReady) {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+// ─────────────────────────────────────────────────
+// Dados demo em memória
+// ─────────────────────────────────────────────────
+let products = [
+  { id:1, name:'Caneta BIC Azul',   category:'Papelaria',    sku:'PEN-001', qty:150, price:1.50  },
+  { id:2, name:'Papel A4 500fls',   category:'Papelaria',    sku:'PAP-002', qty:8,   price:24.90 },
+  { id:3, name:'Notebook Dell 15"', category:'Informática',  sku:'NTB-003', qty:0,   price:3200.00},
+  { id:4, name:'Mouse Logitech',    category:'Informática',  sku:'MOU-004', qty:34,  price:89.90 },
+  { id:5, name:'Cadeira Ergonômica',category:'Mobiliário',   sku:'CAD-005', qty:3,   price:799.00 },
+];
+let editingId = null;
+let currentUser = null;
+let fake2faCode = '';
+
+// ─────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────
+function showMsg(id, type, text) {
+  const el = document.getElementById(id);
+  el.className = `msg ${type} show`;
+  el.textContent = text;
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+function show(id)  { document.getElementById(id).style.display = 'flex'; }
+function hide(id)  { document.getElementById(id).style.display = 'none'; }
+function switchTab(tab) {
+  document.getElementById('tab-login').style.display    = tab === 'login'    ? '' : 'none';
+  document.getElementById('tab-register').style.display = tab === 'register' ? '' : 'none';
+  document.querySelectorAll('.auth-tab').forEach((b,i) => b.classList.toggle('active', (i===0) === (tab==='login')));
+}
+
+// ─────────────────────────────────────────────────
+// LOGIN
+// ─────────────────────────────────────────────────
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+
+  if (!email || !pass) { showMsg('msg-auth','error','Preencha e-mail e senha.'); return; }
+
+  if (supabaseReady) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (error) { showMsg('msg-auth','error', error.message); return; }
+    enterApp(data.user);
+  } else {
+    // MODO DEMO
+    if (email === DEMO_EMAIL && pass === DEMO_PASSWORD) {
+      fake2faCode = Math.floor(100000 + Math.random() * 900000).toString();
+      showMsg('msg-auth','info',`[DEMO] Código 2FA: ${fake2faCode}`);
+      setTimeout(() => goto2FA(), 1200);
+    } else {
+      showMsg('msg-auth','error','Credenciais inválidas. Use demo@empresa.com / Demo@1234');
+    }
+  }
+}
+
+function goto2FA() {
+  hide('auth-screen');
+  document.getElementById('twofa-screen').style.display = 'flex';
+  document.getElementById('otp0').focus();
+}
+
+function handleGoogle() {
+  if (supabaseReady) {
+    supabase.auth.signInWithOAuth({ provider: 'google' });
+  } else {
+    showMsg('msg-auth','info','Configure o Supabase para usar login com Google.');
+  }
+}
+
+// ─────────────────────────────────────────────────
+// REGISTER
+// ─────────────────────────────────────────────────
+async function handleRegister() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass  = document.getElementById('reg-password').value;
+
+  if (!name || !email || !pass) { showMsg('msg-auth','error','Preencha todos os campos.'); return; }
+  if (pass.length < 8) { showMsg('msg-auth','error','Senha precisa ter no mínimo 8 caracteres.'); return; }
+
+  if (supabaseReady) {
+    const { error } = await supabase.auth.signUp({ email, password: pass, options: { data: { full_name: name } } });
+    if (error) { showMsg('msg-auth','error', error.message); return; }
+    showMsg('msg-auth','success','Cadastro realizado! Verifique seu e-mail para confirmar a conta.');
+    switchTab('login');
+  } else {
+    showMsg('msg-auth','success','[DEMO] Cadastro simulado! Use demo@empresa.com para entrar.');
+    switchTab('login');
+  }
+}
+
+// ─────────────────────────────────────────────────
+// 2FA
+// ─────────────────────────────────────────────────
+function otpMove(el, next) { if (el.value && next < 6) document.getElementById('otp'+next).focus(); }
+function otpBack(e, idx)   { if (e.key==='Backspace' && !e.target.value && idx>0) document.getElementById('otp'+(idx-1)).focus(); }
+function otpDone()         { }
+
+function getOTP() {
+  return [0,1,2,3,4,5].map(i => document.getElementById('otp'+i).value).join('');
+}
+
+function verify2FA() {
+  const code = getOTP();
+  if (code.length < 6) { showMsg('msg-2fa','error','Insira o código completo.'); return; }
+  if (!supabaseReady) {
+    if (code === fake2faCode) {
+      enterApp({ email: DEMO_EMAIL, user_metadata: { full_name: 'Usuário Demo' } });
+    } else {
+      showMsg('msg-2fa','error','Código inválido.');
+    }
+    return;
+  }
+  supabase.auth.verifyOtp({ email: document.getElementById('login-email').value, token: code, type: 'email' })
+    .then(({ data, error }) => {
+      if (error) { showMsg('msg-2fa','error', error.message); return; }
+      enterApp(data.user);
+    });
+}
+
+function resend2FA() {
+  fake2faCode = Math.floor(100000 + Math.random() * 900000).toString();
+  showMsg('msg-2fa','success',`[DEMO] Novo código: ${fake2faCode}`);
+}
+
+// ─────────────────────────────────────────────────
+// APP
+// ─────────────────────────────────────────────────
+function enterApp(user) {
+  currentUser = user;
+  const name = user.user_metadata?.full_name || user.email || 'Usuário';
+  const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  document.getElementById('user-name').textContent = name.split(' ')[0];
+  document.getElementById('user-avatar').textContent = initials;
+
+  hide('auth-screen');
+  document.getElementById('twofa-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+
+  renderTable();
+  updateStats();
+  const now = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('last-update').textContent = `Atualizado às ${now}`;
+}
+
+function logout() {
+  if (supabaseReady) supabase.auth.signOut();
+  document.getElementById('app-screen').style.display = 'none';
+  show('auth-screen');
+  currentUser = null;
+}
+
+// ─────────────────────────────────────────────────
+// TABELA & STATS
+// ─────────────────────────────────────────────────
+function status(qty) {
+  if (qty === 0)  return { label:'Sem estoque', cls:'badge-out' };
+  if (qty <= 10)  return { label:'Estoque baixo', cls:'badge-low' };
+  return { label:'Em estoque', cls:'badge-ok' };
+}
+
+function renderTable(q = '') {
+  const body = document.getElementById('table-body');
+  const list = q ? products.filter(p => p.name.toLowerCase().includes(q.toLowerCase()) || p.category.toLowerCase().includes(q.toLowerCase())) : products;
+
+  if (!list.length) {
+    body.innerHTML = '<tr class="empty-row"><td colspan="7">Nenhum produto encontrado.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = list.map(p => {
+    const s = status(p.qty);
+    return `<tr>
+      <td><strong>${p.name}</strong></td>
+      <td><span style="color:var(--muted)">${p.category}</span></td>
+      <td><code style="font-size:12px;color:var(--accent)">${p.sku}</code></td>
+      <td><strong>${p.qty}</strong></td>
+      <td>R$ ${p.price.toFixed(2)}</td>
+      <td><span class="badge ${s.cls}">${s.label}</span></td>
+      <td>
+        <button class="btn-edit" onclick="openModal(${p.id})">Editar</button>
+        <button class="btn-del" onclick="deleteProduct(${p.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = products.length;
+  document.getElementById('stat-ok').textContent  = products.filter(p => p.qty > 10).length;
+  document.getElementById('stat-low').textContent  = products.filter(p => p.qty > 0 && p.qty <= 10).length;
+  document.getElementById('stat-out').textContent  = products.filter(p => p.qty === 0).length;
+}
+
+// ─────────────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────────────
+function openModal(id = null) {
+  editingId = id;
+  document.getElementById('modal-title').textContent = id ? 'Editar produto' : 'Novo produto';
+  if (id) {
+    const p = products.find(x => x.id === id);
+    document.getElementById('p-name').value  = p.name;
+    document.getElementById('p-cat').value   = p.category;
+    document.getElementById('p-sku').value   = p.sku;
+    document.getElementById('p-qty').value   = p.qty;
+    document.getElementById('p-price').value = p.price;
+  } else {
+    ['p-name','p-cat','p-sku','p-qty','p-price'].forEach(i => document.getElementById(i).value = '');
+  }
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+function saveProduct() {
+  const name  = document.getElementById('p-name').value.trim();
+  const cat   = document.getElementById('p-cat').value.trim();
+  const sku   = document.getElementById('p-sku').value.trim();
+  const qty   = parseInt(document.getElementById('p-qty').value) || 0;
+  const price = parseFloat(document.getElementById('p-price').value) || 0;
+
+  if (!name || !cat || !sku) { alert('Preencha nome, categoria e SKU.'); return; }
+
+  if (editingId) {
+    const p = products.find(x => x.id === editingId);
+    Object.assign(p, { name, category: cat, sku, qty, price });
+  } else {
+    products.push({ id: Date.now(), name, category: cat, sku, qty, price });
+  }
+
+  closeModal();
+  renderTable();
+  updateStats();
+}
+
+function deleteProduct(id) {
+  if (!confirm('Remover este produto?')) return;
+  products = products.filter(p => p.id !== id);
+  renderTable();
+  updateStats();
+}
+
+// ─────────────────────────────────────────────────
+// Session check (Supabase)
+// ─────────────────────────────────────────────────
+if (supabaseReady) {
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) enterApp(data.session.user);
+  });
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (sess
