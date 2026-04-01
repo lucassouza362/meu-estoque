@@ -919,6 +919,8 @@ async function saveEditMovement(){
   // Atualizar estoque
   await sb.from('products').update({qty:finalQty}).eq('id',editingMovementProductId);
   document.getElementById('modal-edit-movement').classList.remove('open');
+  var divMov2=document.getElementById('movements-content');
+  if(divMov2)divMov2.innerHTML='<div class="loading"><div class="spinner"></div> Atualizando...</div>';
   await loadMovements();
   await loadDashboard();
   await loadProducts();
@@ -948,6 +950,9 @@ async function deleteMovement(id,productId,type,qty){
   if(res.error){alert('Erro: '+res.error.message);return;}
   // Atualizar estoque com valor correto
   await sb.from('products').update({qty:newQty}).eq('id',realPid);
+  // Limpar tabela imediatamente antes de recarregar
+  var divMov=document.getElementById('movements-content');
+  if(divMov)divMov.innerHTML='<div class="loading"><div class="spinner"></div> Atualizando...</div>';
   await loadMovements();
   await loadDashboard();
   await loadProducts();
