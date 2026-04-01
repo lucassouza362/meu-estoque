@@ -196,6 +196,46 @@ tr:hover td{background:rgba(255,107,26,.03)}
   </div>
 </div>
 
+<!-- SELEÇÃO DE ESCRITÓRIO -->
+<div id="escritorio-screen" style="display:none;min-height:100vh;background:#f1f5f9;align-items:center;justify-content:center;padding:24px">
+  <div style="max-width:520px;width:100%">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="width:40px;height:40px;background:#1e40af;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📦</div>
+        <span style="font-size:22px;font-weight:800;color:#0f172a">Stock<span style="color:#1e40af">OS</span></span>
+      </div>
+      <div style="font-size:22px;font-weight:700;color:#0f172a;margin-bottom:6px">Selecione o escritório</div>
+      <div style="font-size:14px;color:#64748b">Escolha com qual escritório deseja trabalhar agora</div>
+    </div>
+    <div id="escritorio-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px"></div>
+    <div id="btn-ver-todos-wrap" style="display:none;text-align:center">
+      <button id="btn-ver-todos" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:10px 24px;font-size:13px;font-weight:500;color:#0f172a;cursor:pointer;font-family:inherit;transition:all .2s">
+        👁 Ver todos os escritórios
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SELEÇÃO DE ESCRITÓRIO -->
+<div id="escritorio-screen" style="display:none;min-height:100vh;background:#f1f5f9;align-items:center;justify-content:center;padding:24px">
+  <div style="max-width:520px;width:100%">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="width:40px;height:40px;background:#1e40af;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📦</div>
+        <span style="font-size:22px;font-weight:800;color:#0f172a">Stock<span style="color:#1e40af">OS</span></span>
+      </div>
+      <div style="font-size:22px;font-weight:700;color:#0f172a;margin-bottom:6px">Selecione o escritório</div>
+      <div style="font-size:14px;color:#64748b">Escolha com qual escritório deseja trabalhar agora</div>
+    </div>
+    <div id="escritorio-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px"></div>
+    <div id="btn-ver-todos-wrap" style="display:none;text-align:center">
+      <button id="btn-ver-todos" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:10px 24px;font-size:13px;font-weight:500;color:#0f172a;cursor:pointer;font-family:inherit">
+        👁 Ver todos os escritórios
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- APP -->
 <div id="app-screen">
   <div class="sidebar">
@@ -213,6 +253,11 @@ tr:hover td{background:rgba(255,107,26,.03)}
       <div class="nav-item" data-page="config" id="nav-config" style="display:none"><span style="width:18px;text-align:center">⚙️</span> Configurações</div>
       <div class="nav-item" data-page="users" id="nav-users" style="display:none"><span style="width:18px;text-align:center">👥</span> Usuários</div>
     </div>
+    <div style="padding:10px 12px;border-top:0.5px solid #334155">
+      <button id="btn-trocar-escritorio" style="display:none;width:100%;background:rgba(255,255,255,.08);border:1px solid #334155;border-radius:8px;padding:8px 12px;font-size:12px;color:#94a3b8;cursor:pointer;font-family:inherit;text-align:left;transition:all .2s" title="Trocar escritório">
+        🔄 <span id="escritorio-atual-label">Trocar escritório</span>
+      </button>
+    </div>
     <div class="sidebar-user">
       <div class="avatar" id="user-avatar">?</div>
       <div class="user-info">
@@ -229,10 +274,7 @@ tr:hover td{background:rgba(255,107,26,.03)}
     <div class="page-section active" id="page-dashboard">
       <div class="topbar">
         <div class="page-title">Dashboard<small id="last-update"></small></div>
-        <div id="escritorio-selector" style="display:none;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-size:12px;color:var(--muted);font-weight:500">Escritório:</span>
-          <div id="escritorio-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-        </div>
+
       </div>
       <!-- Filtro de data -->
       <div class="date-filter-bar">
@@ -433,7 +475,7 @@ tr:hover td{background:rgba(255,107,26,.03)}
   document.head.appendChild(sdk);
 })();
 function initApp(){
-var escritorios=[], currentEscritorio=null;
+var escritorios=[], currentEscritorio=null, userEscritorios=[];
 const SUPABASE_URL='https://fsdfdrmrmptccudeesbk.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzZGZkcm1ybXB0Y2N1ZGVlc2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODQxMTcsImV4cCI6MjA5MDQ2MDExN30.umM8-OG15FUSZ4YCq8MKLWyiasQunq2LX5tceE1hszI';
 let sb=null,currentUser=null,currentProfile=null,editingProductId=null,movementType='entrada',editingUserId=null;
@@ -477,63 +519,99 @@ async function enterApp(user){
   if(can('movement')){document.getElementById('btn-new-entrada').style.display='';document.getElementById('btn-new-saida').style.display='';}
   var now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('last-update').textContent='Atualizado às '+now;
-  // Set default period = today
+  // Carregar escritórios do usuário
   await loadEscritorios();
-  setPeriod('today');
-  navigateTo('dashboard');
+  var isAdmin=currentProfile.role==='admin';
+  if(isAdmin){
+    // Admin vai direto para seleção com opção "todos"
+    mostrarSelecaoEscritorio();
+  } else {
+    if(userEscritorios.length===0){
+      alert('Você não tem acesso a nenhum escritório. Contate o administrador.');
+      logout();return;
+    } else if(userEscritorios.length===1){
+      // Apenas um escritório — entra direto
+      currentEscritorio=userEscritorios[0].id;
+      entrarNoApp();
+    } else {
+      // Múltiplos escritórios — mostrar seleção
+      mostrarSelecaoEscritorio();
+    }
+  }
 }
-function logout(){if(sb)sb.auth.signOut();currentUser=null;currentProfile=null;escritorios=[];currentEscritorio=null;document.getElementById('app-screen').style.display='none';document.getElementById('auth-screen').style.display='flex';}
+function logout(){if(sb)sb.auth.signOut();currentUser=null;currentProfile=null;escritorios=[];currentEscritorio=null;userEscritorios=[];document.getElementById('app-screen').style.display='none';document.getElementById('escritorio-screen').style.display='none';document.getElementById('auth-screen').style.display='flex';}
 
 async function loadEscritorios(){
   var res=await sb.from('escritorios').select('*').order('name');
   escritorios=res.data||[];
   var isAdmin=currentProfile&&currentProfile.role==='admin';
-  var sel=document.getElementById('escritorio-selector');
-  var btns=document.getElementById('escritorio-btns');
-  if(!sel||!btns)return;
-  if(isAdmin&&escritorios.length>0){
-    sel.style.display='flex';
-    currentEscritorio=null;
-    function renderEscBtns(){
-      btns.innerHTML='';
-      var allBtn=document.createElement('button');
-      allBtn.textContent='Todos';
-      allBtn.style.cssText='font-size:12px;padding:5px 14px;border-radius:6px;border:1px solid #1e40af;background:#1e40af;color:#fff;cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s';
-      allBtn.addEventListener('click',function(){
-        currentEscritorio=null;
-        renderEscBtns();
-        loadDashboard();loadProducts();
-        if(document.getElementById('page-movements').classList.contains('active'))loadMovements();
-      });
-      btns.appendChild(allBtn);
-      escritorios.forEach(function(e){
-        var b=document.createElement('button');
-        b.textContent=e.name;
-        var isActive=currentEscritorio===e.id;
-        b.style.cssText='font-size:12px;padding:5px 14px;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .2s;'+(isActive?'border:1px solid #1e40af;background:#1e40af;color:#fff;font-weight:600':'border:1px solid #cbd5e1;background:#fff;color:#0f172a;font-weight:400');
-        b.addEventListener('click',function(){
-          currentEscritorio=e.id;
-          renderEscBtns();
-          loadDashboard();loadProducts();
-          if(document.getElementById('page-movements').classList.contains('active'))loadMovements();
-        });
-        btns.appendChild(b);
-      });
-      // atualizar botão Todos
-      if(!currentEscritorio){allBtn.style.cssText='font-size:12px;padding:5px 14px;border-radius:6px;border:1px solid #1e40af;background:#1e40af;color:#fff;cursor:pointer;font-family:inherit;font-weight:600';}
-      else{allBtn.style.cssText='font-size:12px;padding:5px 14px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;cursor:pointer;font-family:inherit;font-weight:400';}
-    }
-    renderEscBtns();
+  if(isAdmin){
+    userEscritorios=escritorios;
   } else {
-    sel.style.display='none';
-    currentEscritorio=currentProfile&&currentProfile.escritorio_id?currentProfile.escritorio_id:null;
+    var pe=await sb.from('perfil_escritorios').select('escritorio_id').eq('perfil_id',currentUser.id);
+    var ids=(pe.data||[]).map(function(x){return x.escritorio_id;});
+    userEscritorios=escritorios.filter(function(e){return ids.includes(e.id);});
   }
   // Popular selects de escritório nos modais
   var pEsc=document.getElementById('p-escritorio');
   if(pEsc){
     pEsc.innerHTML='<option value="">Selecione o escritório...</option>';
-    escritorios.forEach(function(e){var o=document.createElement('option');o.value=e.id;o.textContent=e.name;pEsc.appendChild(o);});
+    var lista=currentEscritorio?escritorios:userEscritorios;
+    lista.forEach(function(e){var o=document.createElement('option');o.value=e.id;o.textContent=e.name;pEsc.appendChild(o);});
+    if(currentEscritorio)pEsc.value=currentEscritorio;
   }
+}
+
+function mostrarSelecaoEscritorio(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('escritorio-screen').style.display='flex';
+  var isAdmin=currentProfile&&currentProfile.role==='admin';
+  var cards=document.getElementById('escritorio-cards');
+  cards.innerHTML='';
+  var lista=isAdmin?escritorios:userEscritorios;
+  lista.forEach(function(e){
+    var card=document.createElement('div');
+    card.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s';
+    card.innerHTML='<div style="width:52px;height:52px;background:#dbeafe;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:24px">🏢</div>'
+      +'<div style="font-size:15px;font-weight:600;color:#0f172a;margin-bottom:4px">'+e.name+'</div>'
+      +'<div style="font-size:12px;color:#64748b" id="card-count-'+e.id+'">Carregando...</div>';
+    card.addEventListener('mouseenter',function(){card.style.borderColor='#1e40af';card.style.transform='translateY(-2px)';});
+    card.addEventListener('mouseleave',function(){card.style.borderColor='#e2e8f0';card.style.transform='translateY(0)';});
+    card.addEventListener('click',function(){currentEscritorio=e.id;entrarNoApp();});
+    cards.appendChild(card);
+    // Carregar contagem de produtos
+    sb.from('products').select('id',{count:'exact'}).eq('escritorio_id',e.id).then(function(r){
+      var el=document.getElementById('card-count-'+e.id);
+      if(el)el.textContent=(r.count||0)+' produto'+(r.count===1?'':'s');
+    });
+  });
+  // Botão "Ver todos" só para admin
+  var btnWrap=document.getElementById('btn-ver-todos-wrap');
+  if(isAdmin)btnWrap.style.display='block';
+  else btnWrap.style.display='none';
+}
+
+function entrarNoApp(){
+  document.getElementById('escritorio-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  // Botão trocar na sidebar
+  var btnTrocar=document.getElementById('btn-trocar-escritorio');
+  var podeEscolher=currentProfile.role==='admin'||userEscritorios.length>1;
+  if(podeEscolher&&btnTrocar){
+    btnTrocar.style.display='block';
+    var escNome=currentEscritorio?(escritorios.find(function(e){return e.id===currentEscritorio;})||{name:'Todos'}).name:'Todos';
+    document.getElementById('escritorio-atual-label').textContent=escNome;
+  }
+  // Popular select de produto no modal
+  var pEsc=document.getElementById('p-escritorio');
+  if(pEsc){
+    pEsc.innerHTML='<option value="">Selecione...</option>';
+    escritorios.forEach(function(e){var o=document.createElement('option');o.value=e.id;o.textContent=e.name;pEsc.appendChild(o);});
+    if(currentEscritorio)pEsc.value=currentEscritorio;
+  }
+  setPeriod('today');
+  navigateTo('dashboard');
 }
 
 async function handleLogin(){var email=document.getElementById('login-email').value.trim();var pass=document.getElementById('login-password').value;if(!email||!pass){showMsg('msg-auth','error','Preencha e-mail e senha.');return;}var res=await sb.auth.signInWithPassword({email:email,password:pass});if(res.error){showMsg('msg-auth','error',res.error.message);return;}enterApp(res.data.user);}
@@ -603,9 +681,12 @@ async function loadProducts(){
     var btns='';
     if(can('movement'))btns+='<button class="btn-sm" onclick="openMovement(\'entrada\',\''+p.id+'\')">+ Entrada</button><button class="btn-sm out" onclick="openMovement(\'saida\',\''+p.id+'\')">- Saída</button>';
     if(can('product'))btns+='<button class="btn-edit" onclick="openEditProduct(\''+p.id+'\')">Editar</button>';
-    return '<tr><td><strong>'+p.name+'</strong></td><td style="color:var(--muted)">'+p.category+'</td><td><code style="color:var(--accent);font-size:12px">'+p.sku+'</code></td><td><strong>'+p.qty+'</strong></td><td><span class="badge '+s.cls+'">'+s.label+'</span></td><td>'+btns+'</td></tr>';
+    var escNomeProd=(!currentEscritorio&&escritorios.length>1)?(escritorios.find(function(e){return e.id===p.escritorio_id;})||{name:'—'}).name:'';
+    var escTdProd=(!currentEscritorio&&escritorios.length>1)?'<td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(30,64,175,.1);color:#1e40af;font-weight:500">'+escNomeProd+'</span></td>':'';
+    return '<tr><td><strong>'+p.name+'</strong></td><td style="color:var(--muted)">'+p.category+'</td><td><code style="color:var(--accent);font-size:12px">'+p.sku+'</code></td><td><strong>'+p.qty+'</strong></td>'+escTdProd+'<td><span class="badge '+s.cls+'">'+s.label+'</span></td><td>'+btns+'</td></tr>';
   }).join('');
-  div.innerHTML='<div class="card"><div style="overflow-x:auto"><table><thead><tr><th>Produto</th><th>Categoria</th><th>SKU</th><th>Qtd.</th><th>Status</th><th>Ações</th></tr></thead><tbody>'+(rows||'<tr class="empty-row"><td colspan="6">Nenhum produto.</td></tr>')+'</tbody></table></div></div>';
+  var escThProd=(!currentEscritorio&&escritorios.length>1)?'<th>Escritório</th>':'';
+  div.innerHTML='<div class="card"><div style="overflow-x:auto"><table><thead><tr><th>Produto</th><th>Categoria</th><th>SKU</th><th>Qtd.</th>'+escThProd+'<th>Status</th><th>Ações</th></tr></thead><tbody>'+(rows||'<tr class="empty-row"><td colspan="6">Nenhum produto.</td></tr>')+'</tbody></table></div></div>';
 }
 
 // ── MOVIMENTAÇÕES ──
@@ -820,9 +901,17 @@ async function deleteMovement(id,productId,type,qty){
 function openEditUser(id,email,role){editingUserId=id;document.getElementById('modal-user-email').textContent=email;document.getElementById('u-role').value=role;document.getElementById('modal-user').classList.add('open');}
 async function saveUser(){
   var role=document.getElementById('u-role').value;
-  var escId=document.getElementById('u-escritorio').value||null;
-  var res=await sb.from('profiles').update({role:role,escritorio_id:escId}).eq('id',editingUserId);
+  var res=await sb.from('profiles').update({role:role}).eq('id',editingUserId);
   if(res.error){alert('Erro ao salvar: '+res.error.message);return;}
+  // Salvar escritórios: remove todos e reinsere os selecionados
+  await sb.from('perfil_escritorios').delete().eq('perfil_id',editingUserId);
+  var checks=document.querySelectorAll('#u-escritorios-checks input:checked');
+  var inserts=[];
+  checks.forEach(function(c){inserts.push({perfil_id:editingUserId,escritorio_id:c.value});});
+  if(inserts.length>0){
+    var ri=await sb.from('perfil_escritorios').insert(inserts);
+    if(ri.error){alert('Erro ao salvar escritórios: '+ri.error.message);return;}
+  }
   document.getElementById('modal-user').classList.remove('open');
   loadUsers();
 }
@@ -846,6 +935,8 @@ document.getElementById('m-product').addEventListener('change',updateStockInfo);
 document.getElementById('btn-cancel-user').addEventListener('click',function(){document.getElementById('modal-user').classList.remove('open');});
 document.getElementById('btn-save-user').addEventListener('click',saveUser);
 document.getElementById('btn-save-config').addEventListener('click',saveConfig);
+document.getElementById('btn-trocar-escritorio').addEventListener('click',function(){mostrarSelecaoEscritorio();});
+document.getElementById('btn-ver-todos').addEventListener('click',function(){currentEscritorio=null;entrarNoApp();});
 document.getElementById('search-dashboard').addEventListener('input',loadDashboard);
 document.getElementById('filter-status').addEventListener('change',loadDashboard);
 document.getElementById('search-products').addEventListener('input',loadProducts);
