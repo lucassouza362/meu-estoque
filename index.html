@@ -919,24 +919,30 @@ async function saveEditMovement(){
   loadMovements();loadDashboard();loadProducts();
 }
 async function deleteMovement(id,productId,type,qty){
-  var msg=type==='entrada'
-    ?'Excluir esta entrada?\n\nO estoque será reduzido em '+qty+' unidades automaticamente.'
-    :'Excluir esta saída?\n\nO estoque será devolvido em '+qty+' unidades automaticamente.';
+  // Buscar os valores ATUAIS da movimentação no banco (evita usar dados desatualizados do DOM)
+  var movRes=await sb.from('movements').select('qty,type,product_id').eq('id',id).single();
+  if(movRes.error){alert('Erro ao buscar movimentação.');return;}
+  var realQty=movRes.data.qty;
+  var realType=movRes.data.type;
+  var realPid=movRes.data.product_id;
+  var msg=realType==='entrada'
+    ?'Excluir esta entrada de '+realQty+' unidades?\n\nO estoque será reduzido em '+realQty+' unidades.'
+    :'Excluir esta saída de '+realQty+' unidades?\n\nO estoque será devolvido em '+realQty+' unidades.';
   if(!confirm(msg))return;
-  // Buscar estoque atual
-  var prodRes=await sb.from('products').select('qty').eq('id',productId).single();
+  // Buscar estoque atual do produto
+  var prodRes=await sb.from('products').select('qty').eq('id',realPid).single();
   if(prodRes.error){alert('Erro ao buscar produto.');return;}
   var currentQty=prodRes.data.qty;
-  // Reverter efeito da movimentação
-  var newQty=type==='entrada'?currentQty-qty:currentQty+qty;
+  // Reverter efeito real da movimentação
+  var newQty=realType==='entrada'?currentQty-realQty:currentQty+realQty;
   if(newQty<0){
-    if(!confirm('Atenção: reverter esta entrada deixaria o estoque negativo ('+newQty+'). Deseja continuar assim mesmo?'))return;
+    if(!confirm('Atenção: reverter isto deixaria o estoque negativo ('+newQty+'). Deseja continuar?'))return;
   }
   // Deletar movimentação
   var res=await sb.from('movements').delete().eq('id',id);
   if(res.error){alert('Erro: '+res.error.message);return;}
-  // Atualizar estoque
-  await sb.from('products').update({qty:newQty}).eq('id',productId);
+  // Atualizar estoque com valor correto
+  await sb.from('products').update({qty:newQty}).eq('id',realPid);
   loadMovements();loadDashboard();loadProducts();
 }
 
