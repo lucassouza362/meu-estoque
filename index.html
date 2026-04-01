@@ -880,16 +880,19 @@ async function saveMovement(){
 
 // ── EDITAR / DELETAR MOVIMENTAÇÃO (admin) ──
 var editingMovementId=null, editingMovementProductId=null, editingMovementOldType=null, editingMovementOldQty=0;
-function openEditMovement(id,productId,productName,type,qty,noteEncoded){
+async function openEditMovement(id,productId,productName,type,qty,noteEncoded){
+  // Buscar valores ATUAIS do banco para evitar dados desatualizados do DOM
+  var movRes=await sb.from('movements').select('*').eq('id',id).single();
+  if(movRes.error){alert('Erro ao carregar movimentação.');return;}
+  var m=movRes.data;
   editingMovementId=id;
-  editingMovementProductId=productId;
-  editingMovementOldType=type;
-  editingMovementOldQty=parseInt(qty,10)||0;
-  console.log('[EDIT MOV] id='+id+' pid='+productId+' oldType='+type+' oldQty='+editingMovementOldQty);
-  document.getElementById('em-product').value=productName;
-  document.getElementById('em-type').value=type;
-  document.getElementById('em-qty').value=qty;
-  document.getElementById('em-note').value=decodeURIComponent(noteEncoded);
+  editingMovementProductId=m.product_id;
+  editingMovementOldType=m.type;
+  editingMovementOldQty=parseInt(m.qty,10)||0;
+  document.getElementById('em-product').value=m.product_name;
+  document.getElementById('em-type').value=m.type;
+  document.getElementById('em-qty').value=m.qty;
+  document.getElementById('em-note').value=m.note||'';
   document.getElementById('modal-edit-movement').classList.add('open');
 }
 async function saveEditMovement(){
@@ -916,7 +919,9 @@ async function saveEditMovement(){
   // Atualizar estoque
   await sb.from('products').update({qty:finalQty}).eq('id',editingMovementProductId);
   document.getElementById('modal-edit-movement').classList.remove('open');
-  loadMovements();loadDashboard();loadProducts();
+  await loadMovements();
+  await loadDashboard();
+  await loadProducts();
 }
 async function deleteMovement(id,productId,type,qty){
   // Buscar os valores ATUAIS da movimentação no banco (evita usar dados desatualizados do DOM)
@@ -943,7 +948,9 @@ async function deleteMovement(id,productId,type,qty){
   if(res.error){alert('Erro: '+res.error.message);return;}
   // Atualizar estoque com valor correto
   await sb.from('products').update({qty:newQty}).eq('id',realPid);
-  loadMovements();loadDashboard();loadProducts();
+  await loadMovements();
+  await loadDashboard();
+  await loadProducts();
 }
 
 // ── MODAL USUÁRIO ──
