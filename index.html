@@ -679,14 +679,22 @@ async function loadProducts(){
   var rows=ps.map(function(p){
     var s=getStatus(p.qty,p.id);
     var btns='';
-    if(can('movement'))btns+='<button class="btn-sm" onclick="openMovement(\'entrada\',\''+p.id+'\')">+ Entrada</button><button class="btn-sm out" onclick="openMovement(\'saida\',\''+p.id+'\')">- Saída</button>';
-    if(can('product'))btns+='<button class="btn-edit" onclick="openEditProduct(\''+p.id+'\')">Editar</button>';
+    if(can('movement'))btns+='<button class="btn-sm" data-action="entrada" data-id="'+p.id+'">+ Entrada</button><button class="btn-sm out" data-action="saida" data-id="'+p.id+'">- Saída</button>';
+    if(can('product'))btns+='<button class="btn-edit" data-action="edit-prod" data-id="'+p.id+'">Editar</button>';
     var escNomeProd=(!currentEscritorio&&escritorios.length>1)?(escritorios.find(function(e){return e.id===p.escritorio_id;})||{name:'—'}).name:'';
     var escTdProd=(!currentEscritorio&&escritorios.length>1)?'<td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(30,64,175,.1);color:#1e40af;font-weight:500">'+escNomeProd+'</span></td>':'';
     return '<tr><td><strong>'+p.name+'</strong></td><td style="color:var(--muted)">'+p.category+'</td><td><code style="color:var(--accent);font-size:12px">'+p.sku+'</code></td><td><strong>'+p.qty+'</strong></td>'+escTdProd+'<td><span class="badge '+s.cls+'">'+s.label+'</span></td><td>'+btns+'</td></tr>';
   }).join('');
   var escThProd=(!currentEscritorio&&escritorios.length>1)?'<th>Escritório</th>':'';
   div.innerHTML='<div class="card"><div style="overflow-x:auto"><table><thead><tr><th>Produto</th><th>Categoria</th><th>SKU</th><th>Qtd.</th>'+escThProd+'<th>Status</th><th>Ações</th></tr></thead><tbody>'+(rows||'<tr class="empty-row"><td colspan="6">Nenhum produto.</td></tr>')+'</tbody></table></div></div>';
+  var tblProd=div.querySelector('table');
+  if(tblProd){tblProd.addEventListener('click',function(e){
+    var btn=e.target.closest('button[data-action]');if(!btn)return;
+    var a=btn.dataset.action,id=btn.dataset.id;
+    if(a==='edit-prod')openEditProduct(id);
+    else if(a==='entrada')openMovement('entrada',id);
+    else if(a==='saida')openMovement('saida',id);
+  });}
 }
 
 // ── MOVIMENTAÇÕES ──
