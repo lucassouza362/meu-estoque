@@ -700,7 +700,7 @@ async function loadProducts(){
 // ── MOVIMENTAÇÕES ──
 async function loadMovements(){
   var div=document.getElementById('movements-content');div.innerHTML='<div class="loading"><div class="spinner"></div> Carregando...</div>';
-  var timestamp=new Date().getTime();
+  // Forçar nova requisição sem cache
   var qm=sb.from('movements').select('*').order('created_at',{ascending:false}).limit(100);
   if(currentEscritorio)qm=qm.eq('escritorio_id',currentEscritorio);
   var res=await qm;
@@ -914,15 +914,35 @@ async function saveEditMovement(){
   // Aplicar efeito novo
   var finalQty=newType==='entrada'?afterRevert+newQty:afterRevert-newQty;
   if(finalQty<0){alert('Operação inválida: o estoque ficaria negativo ('+finalQty+'). Verifique a quantidade.');return;}
-  // Salvar movimentação
+  // Salvar movimentação e verificar se foi salvo
   var res=await sb.from('movements').update({type:newType,qty:newQty,note:note}).eq('id',editingMovementId);
-  if(res.error){alert('Erro: '+res.error.message);return;}
+  if(res.error){alert('Erro ao salvar movimentação: '+res.error.message);return;}
+  // Confirmar que foi salvo
+  var check=await sb.from('movements').select('qty,type').eq('id',editingMovementId).single();
+  if(check.data){console.log('[SALVO] qty='+check.data.qty+' type='+check.data.type);}
   // Atualizar estoque
-  await sb.from('products').update({qty:finalQty}).eq('id',editingMovementProductId);
+  var resP=await sb.from('products').update({qty:finalQty}).eq('id',editingMovementProductId);
+  if(resP.error){alert('Erro ao atualizar estoque: '+resP.error.message);return;}
   document.getElementById('modal-edit-movement').classList.remove('open');
-  document.getElementById('movements-content').innerHTML='<div class="loading"><div class="spinner"></div> Atualizando...</div>';
-  // Pequena pausa para o Supabase confirmar a escrita antes de ler
-  await new Promise(function(r){setTimeout(r,400);});
+  // Atualizar linha na tabela diretamente sem depender do Supabase retornar dado novo
+  var rows=document.querySelectorAll('#movements-content tr');
+  rows.forEach(function(row){
+    var editBtn=row.querySelector('[data-action="edit-mov"][data-id="'+editingMovementId+'"]');
+    if(editBtn){
+      // Atualizar qty exibido na linha
+      var cells=row.querySelectorAll('td');
+      // Célula de qty é a 4ª (index 3)
+      if(cells[3]){cells[3].innerHTML='<strong style="color:'+(newType==='entrada'?'#10b981':'#ef4444')+'">'+newQty+'</strong>';}
+      // Atualizar badge tipo (3ª célula, index 2)
+      if(cells[2]){cells[2].innerHTML='<span class="badge badge-'+newType+'">'+newType+'</span>';}
+      // Atualizar data-qty e data-type nos botões
+      editBtn.dataset.qty=newQty;
+      editBtn.dataset.type=newType;
+      var delBtn=row.querySelector('[data-action="del-mov"]');
+      if(delBtn){delBtn.dataset.qty=newQty;delBtn.dataset.type=newType;}
+    }
+  });
+  await new Promise(function(r){setTimeout(r,600);});
   await loadMovements();
   await loadDashboard();
   await loadProducts();
