@@ -713,7 +713,7 @@ async function loadMovements(){
     var d=new Date(m.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
     var escNome=(escritorios.find(function(e){return e.id===m.escritorio_id;})||{name:'—'}).name;
     var escTd=showEscCol?'<td><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(30,64,175,.1);color:#1e40af;font-weight:500">'+escNome+'</span></td>':'';
-    var adminBtns=isAdmin?'<td><button class="btn-edit" data-action="edit-mov" data-id="'+m.id+'" data-name="'+encodeURIComponent(m.product_name)+'" data-type="'+m.type+'" data-qty="'+m.qty+'" data-note="'+encodeURIComponent(m.note||'')+'">Editar</button><button class="btn-del" data-action="del-mov" data-id="'+m.id+'" data-pid="'+m.product_id+'" data-type="'+m.type+'" data-qty="'+m.qty+'">✕</button></td>':'';
+    var adminBtns=isAdmin?'<td><button class="btn-edit" data-action="edit-mov" data-id="'+m.id+'" data-pid="'+m.product_id+'" data-name="'+encodeURIComponent(m.product_name)+'" data-type="'+m.type+'" data-qty="'+m.qty+'" data-note="'+encodeURIComponent(m.note||'')+'">Editar</button><button class="btn-del" data-action="del-mov" data-id="'+m.id+'" data-pid="'+m.product_id+'" data-type="'+m.type+'" data-qty="'+m.qty+'">✕</button></td>':'';
     return '<tr><td style="color:var(--muted);font-size:12px">'+d+'</td><td><strong>'+m.product_name+'</strong></td><td><span class="badge badge-'+m.type+'">'+m.type+'</span></td><td><strong style="color:'+(m.type==='entrada'?'#10b981':'#ef4444')+'">'+m.qty+'</strong></td>'+escTd+'<td style="font-size:12px;color:var(--muted)">'+(m.user_name||'-')+'</td><td style="font-size:12px;color:var(--muted)">'+(m.note||'-')+'</td>'+adminBtns+'</tr>';
   }).join('');
   var adminTh=isAdmin?'<th>Ações</th>':'';
@@ -724,7 +724,7 @@ async function loadMovements(){
   if(tbl){tbl.addEventListener('click',function(e){
     var btn=e.target.closest('button[data-action]');if(!btn)return;
     var d=btn.dataset;
-    if(d.action==='edit-mov')openEditMovement(d.id,decodeURIComponent(d.name),d.type,d.qty,d.note);
+    if(d.action==='edit-mov')openEditMovement(d.id,d.pid,decodeURIComponent(d.name),d.type,d.qty,d.note);
     if(d.action==='del-mov')deleteMovement(d.id,d.pid,d.type,parseInt(d.qty));
   });}
 }
@@ -879,9 +879,13 @@ async function saveMovement(){
 }
 
 // ── EDITAR / DELETAR MOVIMENTAÇÃO (admin) ──
-var editingMovementId=null;
-function openEditMovement(id,productName,type,qty,noteEncoded){
+var editingMovementId=null, editingMovementProductId=null, editingMovementOldType=null, editingMovementOldQty=0;
+function openEditMovement(id,productId,productName,type,qty,noteEncoded){
   editingMovementId=id;
+  editingMovementProductId=productId;
+  editingMovementOldType=type;
+  editingMovementOldQty=parseInt(qty,10)||0;
+  console.log('[EDIT MOV] id='+id+' pid='+productId+' oldType='+type+' oldQty='+editingMovementOldQty);
   document.getElementById('em-product').value=productName;
   document.getElementById('em-type').value=type;
   document.getElementById('em-qty').value=qty;
@@ -889,20 +893,51 @@ function openEditMovement(id,productName,type,qty,noteEncoded){
   document.getElementById('modal-edit-movement').classList.add('open');
 }
 async function saveEditMovement(){
-  var type=document.getElementById('em-type').value;
-  var qty=parseInt(document.getElementById('em-qty').value)||0;
+  var newType=document.getElementById('em-type').value;
+  var newQty=parseInt(document.getElementById('em-qty').value)||0;
   var note=document.getElementById('em-note').value.trim();
-  if(qty<1){alert('Quantidade deve ser maior que zero.');return;}
-  var res=await sb.from('movements').update({type:type,qty:qty,note:note}).eq('id',editingMovementId);
+  if(newQty<1){alert('Quantidade deve ser maior que zero.');return;}
+  // Calcular ajuste no estoque:
+  // 1. Reverter o efeito antigo
+  // 2. Aplicar o efeito novo
+  // Efeito antigo: entrada=+oldQty, saida=-oldQty
+  // Efeito novo:   entrada=+newQty, saida=-newQty
+  var prodRes=await sb.from('products').select('qty').eq('id',editingMovementProductId).single();
+  if(prodRes.error){alert('Erro ao buscar produto: '+prodRes.error.message);return;}
+  var currentQty=prodRes.data.qty;
+  // Reverter efeito antigo
+  var afterRevert=editingMovementOldType==='entrada'?currentQty-editingMovementOldQty:currentQty+editingMovementOldQty;
+  // Aplicar efeito novo
+  var finalQty=newType==='entrada'?afterRevert+newQty:afterRevert-newQty;
+  if(finalQty<0){alert('Operação inválida: o estoque ficaria negativo ('+finalQty+'). Verifique a quantidade.');return;}
+  // Salvar movimentação
+  var res=await sb.from('movements').update({type:newType,qty:newQty,note:note}).eq('id',editingMovementId);
   if(res.error){alert('Erro: '+res.error.message);return;}
+  // Atualizar estoque
+  await sb.from('products').update({qty:finalQty}).eq('id',editingMovementProductId);
   document.getElementById('modal-edit-movement').classList.remove('open');
-  loadMovements();loadDashboard();
+  loadMovements();loadDashboard();loadProducts();
 }
 async function deleteMovement(id,productId,type,qty){
-  if(!confirm('Excluir esta movimentação?\n\nAtenção: o estoque NÃO será revertido automaticamente.'))return;
+  var msg=type==='entrada'
+    ?'Excluir esta entrada?\n\nO estoque será reduzido em '+qty+' unidades automaticamente.'
+    :'Excluir esta saída?\n\nO estoque será devolvido em '+qty+' unidades automaticamente.';
+  if(!confirm(msg))return;
+  // Buscar estoque atual
+  var prodRes=await sb.from('products').select('qty').eq('id',productId).single();
+  if(prodRes.error){alert('Erro ao buscar produto.');return;}
+  var currentQty=prodRes.data.qty;
+  // Reverter efeito da movimentação
+  var newQty=type==='entrada'?currentQty-qty:currentQty+qty;
+  if(newQty<0){
+    if(!confirm('Atenção: reverter esta entrada deixaria o estoque negativo ('+newQty+'). Deseja continuar assim mesmo?'))return;
+  }
+  // Deletar movimentação
   var res=await sb.from('movements').delete().eq('id',id);
   if(res.error){alert('Erro: '+res.error.message);return;}
-  loadMovements();loadDashboard();
+  // Atualizar estoque
+  await sb.from('products').update({qty:newQty}).eq('id',productId);
+  loadMovements();loadDashboard();loadProducts();
 }
 
 // ── MODAL USUÁRIO ──
