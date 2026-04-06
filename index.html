@@ -184,6 +184,28 @@ tr:hover td{background:rgba(255,107,26,.03)}
   </div>
 </div>
 
+<!-- TELA DEFINIR SENHA (convite/reset) -->
+<div id="set-password-screen" style="display:none;min-height:100vh;background:#1e293b;align-items:center;justify-content:center;padding:24px">
+  <div style="background:#0f172a;border:1px solid #334155;border-left:6px solid #1e40af;border-radius:20px;padding:48px 40px;width:100%;max-width:420px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px">
+      <div style="width:44px;height:44px;background:#1e40af;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px">📦</div>
+      <div style="font-size:24px;font-weight:800;color:#fff">Stock<span style="color:#1e40af">OS</span></div>
+    </div>
+    <div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:8px">Defina sua senha</div>
+    <div style="font-size:14px;color:#64748b;margin-bottom:28px">Crie uma senha segura para acessar o sistema</div>
+    <div id="msg-setpwd" class="msg"></div>
+    <div class="form-group">
+      <label class="form-label">Nova senha</label>
+      <input id="new-password" class="form-input" type="password" placeholder="Mín. 8 caracteres" style="background:#1e293b;border-color:#334155;color:#f1f5f9">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Confirmar senha</label>
+      <input id="confirm-password" class="form-input" type="password" placeholder="Repita a senha" style="background:#1e293b;border-color:#334155;color:#f1f5f9">
+    </div>
+    <button class="btn btn-primary" id="btn-set-password" style="margin-top:8px">Salvar senha e entrar →</button>
+  </div>
+</div>
+
 <!-- SELEÇÃO DE ESCRITÓRIO -->
 <div id="escritorio-screen" style="display:none;min-height:100vh;background:#f1f5f9;align-items:center;justify-content:center;padding:24px">
   <div style="max-width:520px;width:100%">
@@ -201,6 +223,28 @@ tr:hover td{background:rgba(255,107,26,.03)}
         👁 Ver todos os escritórios
       </button>
     </div>
+  </div>
+</div>
+
+<!-- TELA DEFINIR SENHA (convite/reset) -->
+<div id="set-password-screen" style="display:none;min-height:100vh;background:#1e293b;align-items:center;justify-content:center;padding:24px">
+  <div style="background:#0f172a;border:1px solid #334155;border-left:6px solid #1e40af;border-radius:20px;padding:48px 40px;width:100%;max-width:420px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px">
+      <div style="width:44px;height:44px;background:#1e40af;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px">📦</div>
+      <div style="font-size:24px;font-weight:800;color:#fff">Stock<span style="color:#1e40af">OS</span></div>
+    </div>
+    <div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:8px">Defina sua senha</div>
+    <div style="font-size:14px;color:#64748b;margin-bottom:28px">Crie uma senha segura para acessar o sistema</div>
+    <div id="msg-setpwd" class="msg"></div>
+    <div class="form-group">
+      <label class="form-label">Nova senha</label>
+      <input id="new-password" class="form-input" type="password" placeholder="Mín. 8 caracteres" style="background:#1e293b;border-color:#334155;color:#f1f5f9">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Confirmar senha</label>
+      <input id="confirm-password" class="form-input" type="password" placeholder="Repita a senha" style="background:#1e293b;border-color:#334155;color:#f1f5f9">
+    </div>
+    <button class="btn btn-primary" id="btn-set-password" style="margin-top:8px">Salvar senha e entrar →</button>
   </div>
 </div>
 
@@ -1164,8 +1208,51 @@ document.querySelectorAll('.nav-item[data-page]').forEach(function(n){n.addEvent
 [document.getElementById('modal-product'),document.getElementById('modal-movement'),document.getElementById('modal-user'),document.getElementById('modal-edit-movement')].forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});});
 setupCategoryAutocomplete();
 
+async function handleSetPassword(){
+  var pwd=document.getElementById('new-password').value;
+  var conf=document.getElementById('confirm-password').value;
+  if(pwd.length<8){showMsg('msg-setpwd','error','Senha deve ter no mínimo 8 caracteres.');return;}
+  if(pwd!==conf){showMsg('msg-setpwd','error','As senhas não coincidem.');return;}
+  var btn=document.getElementById('btn-set-password');
+  btn.textContent='Salvando...';btn.disabled=true;
+  var res=await sb.auth.updateUser({password:pwd});
+  btn.textContent='Salvar senha e entrar →';btn.disabled=false;
+  if(res.error){showMsg('msg-setpwd','error','Erro: '+res.error.message);return;}
+  showMsg('msg-setpwd','success','Senha definida! Entrando...');
+  setTimeout(function(){
+    document.getElementById('set-password-screen').style.display='none';
+    sb.auth.getSession().then(function(r){if(r.data&&r.data.session)enterApp(r.data.session.user);});
+  },1000);
+}
+document.getElementById('btn-set-password').addEventListener('click',handleSetPassword);
+document.getElementById('confirm-password').addEventListener('keydown',function(e){if(e.key==='Enter')handleSetPassword();});
+
 window.addEventListener('load',function(){
-  try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);sb.auth.getSession().then(function(res){if(res.data&&res.data.session)enterApp(res.data.session.user);});sb.auth.onAuthStateChange(function(event,session){if(session&&!currentUser)enterApp(session.user);});}catch(e){console.error('Supabase error:',e);}
+  try{
+    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    // Detectar token de convite ou recovery na URL
+    var hash=window.location.hash;
+    var params=new URLSearchParams(hash.replace('#','?').replace('#','&'));
+    var type=params.get('type');
+    var accessToken=params.get('access_token');
+    if((type==='invite'||type==='recovery'||type==='signup')&&accessToken){
+      // Setar sessão com o token do convite
+      sb.auth.setSession({access_token:accessToken,refresh_token:params.get('refresh_token')||''}).then(function(){
+        document.getElementById('auth-screen').style.display='none';
+        document.getElementById('set-password-screen').style.display='flex';
+      });
+    } else {
+      sb.auth.getSession().then(function(res){if(res.data&&res.data.session)enterApp(res.data.session.user);});
+      sb.auth.onAuthStateChange(function(event,session){
+        if(event==='PASSWORD_RECOVERY'){
+          document.getElementById('auth-screen').style.display='none';
+          document.getElementById('set-password-screen').style.display='flex';
+        } else if(session&&!currentUser){
+          enterApp(session.user);
+        }
+      });
+    }
+  }catch(e){console.error('Supabase error:',e);}
 });
 } // fim initApp
 </script>
