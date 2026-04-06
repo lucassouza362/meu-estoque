@@ -1007,7 +1007,29 @@ async function deleteMovement(id,productId,type,qty){
 }
 
 // ── MODAL USUÁRIO ──
-function openEditUser(id,email,role){editingUserId=id;document.getElementById('modal-user-email').textContent=email;document.getElementById('u-role').value=role;document.getElementById('modal-user').classList.add('open');}
+async function openEditUser(id,email,role,escId){
+  editingUserId=id;
+  document.getElementById('modal-user-email').textContent=email;
+  document.getElementById('u-role').value=role;
+  // Carregar escritórios vinculados ao usuário
+  var pe=await sb.from('perfil_escritorios').select('escritorio_id').eq('perfil_id',id);
+  var linked=(pe.data||[]).map(function(x){return x.escritorio_id;});
+  var div=document.getElementById('u-escritorios-checks');
+  div.innerHTML='';
+  escritorios.forEach(function(e){
+    var label=document.createElement('label');
+    label.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:13px;color:#0f172a;transition:border-color .15s';
+    var chk=document.createElement('input');
+    chk.type='checkbox';chk.value=e.id;chk.checked=linked.includes(e.id);
+    chk.style.cssText='width:16px;height:16px;accent-color:#1e40af;cursor:pointer;flex-shrink:0';
+    label.appendChild(chk);
+    label.appendChild(document.createTextNode(e.name));
+    label.addEventListener('mouseenter',function(){label.style.borderColor='#1e40af';});
+    label.addEventListener('mouseleave',function(){label.style.borderColor='#e2e8f0';});
+    div.appendChild(label);
+  });
+  document.getElementById('modal-user').classList.add('open');
+}
 async function saveUser(){
   var role=document.getElementById('u-role').value;
   var res=await sb.from('profiles').update({role:role}).eq('id',editingUserId);
