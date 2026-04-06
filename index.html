@@ -1157,14 +1157,16 @@ async function sendInvite(){
   if(currentProfile.role!=='admin'){showMsg('msg-invite','error','Apenas o admin pode enviar convites.');return;}
   var btn=document.getElementById('btn-invite');
   btn.textContent='Enviando...';btn.disabled=true;
-  var res=await sb.auth.admin.inviteUserByEmail(email);
+  // Usar OTP (magic link) que é o método que funciona com email corporativo
+  var res=await sb.auth.signInWithOtp({email:email,options:{shouldCreateUser:true}});
   btn.textContent='✉ Enviar convite';btn.disabled=false;
-  if(res.error){
-    // Fallback: usar signUp sem senha (magic link)
-    var res2=await sb.auth.signInWithOtp({email:email,options:{shouldCreateUser:true}});
-    if(res2.error){showMsg('msg-invite','error','Erro: '+res2.error.message);return;}
-  }
-  showMsg('msg-invite','success','Convite enviado para '+email+'! A pessoa receberá um e-mail para definir a senha.');
+  if(res.error){showMsg('msg-invite','error','Erro: '+res.error.message);return;}
+  // Marcar que este email precisa definir senha após primeiro acesso
+  // Guardar no localStorage do admin para processar depois
+  var pendingList=JSON.parse(localStorage.getItem('stockos_pending_setup')||'[]');
+  if(!pendingList.includes(email))pendingList.push(email);
+  localStorage.setItem('stockos_pending_setup',JSON.stringify(pendingList));
+  showMsg('msg-invite','success','Convite enviado para '+email+'!');
   document.getElementById('invite-email').value='';
   setTimeout(function(){loadUsers();},1500);
 }
@@ -1218,6 +1220,10 @@ async function handleSetPassword(){
   var res=await sb.auth.updateUser({password:pwd});
   btn.textContent='Salvar senha e entrar →';btn.disabled=false;
   if(res.error){showMsg('msg-setpwd','error','Erro: '+res.error.message);return;}
+  // Limpar flag needs_password_setup
+  if(currentUser){
+    await sb.from('profiles').update({needs_password_setup:false}).eq('id',currentUser.id);
+  }
   showMsg('msg-setpwd','success','Senha definida! Entrando...');
   setTimeout(function(){
     document.getElementById('set-password-screen').style.display='none';
@@ -1231,7 +1237,7 @@ window.addEventListener('load',function(){
   try{
     sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
     sb.auth.onAuthStateChange(function(event,session){
-      console.log('[AUTH EVENT]',event,session&&session.user&&session.user.email);
+      console.log('[AUTH EVENT]',event,session&&session.user?session.user.email:'');
       if(event==='PASSWORD_RECOVERY'){
         document.getElementById('auth-screen').style.display='none';
         document.getElementById('escritorio-screen').style.display='none';
@@ -1239,30 +1245,37 @@ window.addEventListener('load',function(){
         document.getElementById('set-password-screen').style.display='flex';
         return;
       }
-      if(event==='SIGNED_IN'&&session){
+      if((event==='SIGNED_IN'||event==='INITIAL_SESSION')&&session&&!currentUser){
         var u=session.user;
-        // Se o usuário veio de convite, last_sign_in_at é igual a created_at
-        // e confirmed_at é recente — mostrar tela de definir senha
-        var createdAt=new Date(u.created_at).getTime();
-        var lastSignIn=new Date(u.last_sign_in_at||u.created_at).getTime();
-        var diffSeconds=Math.abs(lastSignIn-createdAt)/1000;
-        var isNewInvite=diffSeconds<30; // criado e logando agora pela primeira vez
-        if(isNewInvite&&!currentUser){
-          document.getElementById('auth-screen').style.display='none';
-          document.getElementById('escritorio-screen').style.display='none';
-          document.getElementById('app-screen').style.display='none';
-          document.getElementById('set-password-screen').style.display='flex';
-          // Guardar sessão para usar no updateUser
-          currentUser=u;
-          return;
-        }
-        if(!currentUser)enterApp(u);
+        // Checar flag de convite pendente no perfil
+        sb.from('profiles').select('needs_password_setup').eq('id',u.id).single().then(function(r){
+          if(r.data&&r.data.needs_password_setup){
+            currentUser=u;
+            document.getElementById('auth-screen').style.display='none';
+            document.getElementById('escritorio-screen').style.display='none';
+            document.getElementById('app-screen').style.display='none';
+            document.getElementById('set-password-screen').style.display='flex';
+          } else {
+            enterApp(u);
+          }
+        });
       }
     });
 
     sb.auth.getSession().then(function(res){
       if(res.data&&res.data.session&&!currentUser){
-        enterApp(res.data.session.user);
+        var u=res.data.session.user;
+        sb.from('profiles').select('needs_password_setup').eq('id',u.id).single().then(function(r){
+          if(r.data&&r.data.needs_password_setup){
+            currentUser=u;
+            document.getElementById('auth-screen').style.display='none';
+            document.getElementById('escritorio-screen').style.display='none';
+            document.getElementById('app-screen').style.display='none';
+            document.getElementById('set-password-screen').style.display='flex';
+          } else {
+            enterApp(u);
+          }
+        });
       }
     });
   }catch(e){console.error('Supabase error:',e);}
