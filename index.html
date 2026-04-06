@@ -1230,28 +1230,48 @@ document.getElementById('confirm-password').addEventListener('keydown',function(
 window.addEventListener('load',function(){
   try{
     sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-    // Detectar token de convite ou recovery na URL
-    var hash=window.location.hash;
-    var params=new URLSearchParams(hash.replace('#','?').replace('#','&'));
-    var type=params.get('type');
-    var accessToken=params.get('access_token');
-    if((type==='invite'||type==='recovery'||type==='signup')&&accessToken){
-      // Setar sessão com o token do convite
-      sb.auth.setSession({access_token:accessToken,refresh_token:params.get('refresh_token')||''}).then(function(){
+    // Verificar se veio de um convite (flag no localStorage)
+    var isInviteFlow=localStorage.getItem('stockos_invite')==='1';
+
+    sb.auth.onAuthStateChange(function(event,session){
+      console.log('[AUTH EVENT]',event);
+      if(event==='PASSWORD_RECOVERY'||event==='USER_UPDATED'){
+        return;
+      }
+      if(event==='SIGNED_IN'&&isInviteFlow){
+        // Veio de convite — mostrar tela de definir senha
+        localStorage.removeItem('stockos_invite');
         document.getElementById('auth-screen').style.display='none';
+        document.getElementById('escritorio-screen').style.display='none';
         document.getElementById('set-password-screen').style.display='flex';
-      });
-    } else {
-      sb.auth.getSession().then(function(res){if(res.data&&res.data.session)enterApp(res.data.session.user);});
-      sb.auth.onAuthStateChange(function(event,session){
-        if(event==='PASSWORD_RECOVERY'){
+        return;
+      }
+      if(session&&!currentUser){
+        enterApp(session.user);
+      }
+    });
+
+    // Detectar se a URL tem parâmetros de convite/recovery
+    var urlParams=new URLSearchParams(window.location.search);
+    var hashParams=new URLSearchParams(window.location.hash.substring(1));
+    var urlType=urlParams.get('type')||hashParams.get('type')||'';
+    var urlToken=urlParams.get('token')||hashParams.get('access_token')||'';
+
+    if(urlType==='invite'||urlType==='magiclink'||urlType==='recovery'||urlToken){
+      localStorage.setItem('stockos_invite','1');
+    }
+
+    sb.auth.getSession().then(function(res){
+      if(res.data&&res.data.session){
+        if(isInviteFlow){
+          localStorage.removeItem('stockos_invite');
           document.getElementById('auth-screen').style.display='none';
           document.getElementById('set-password-screen').style.display='flex';
-        } else if(session&&!currentUser){
-          enterApp(session.user);
+        } else {
+          enterApp(res.data.session.user);
         }
-      });
-    }
+      }
+    });
   }catch(e){console.error('Supabase error:',e);}
 });
 } // fim initApp
