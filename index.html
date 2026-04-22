@@ -164,6 +164,10 @@ tr:hover td{background:rgba(255,107,26,.03)}
       <div class="auth-heading">Bem-vindo de volta</div>
       <div class="auth-sub">Faça login para acessar o sistema</div>
       <div id="msg-auth" class="msg"></div>
+      <div style="display:flex;background:#0f172a;border-radius:10px;padding:4px;margin-bottom:28px;border:1px solid #334155">
+        <button id="tab-btn-login" style="flex:1;padding:9px;border:none;background:#1e40af;color:#fff;font-family:inherit;font-size:13px;font-weight:600;border-radius:7px;cursor:pointer">Entrar</button>
+        <button id="tab-btn-register" style="flex:1;padding:9px;border:none;background:transparent;color:#94a3b8;font-family:inherit;font-size:13px;font-weight:500;border-radius:7px;cursor:pointer">Cadastrar</button>
+      </div>
 
       <div id="tab-login">
         <div class="form-group"><label class="form-label">E-mail</label><input id="login-email" class="form-input" type="email" placeholder="seu@empresa.com"></div>
@@ -172,6 +176,12 @@ tr:hover td{background:rgba(255,107,26,.03)}
 
       </div>
 
+      <div id="tab-register" style="display:none">
+        <div class="form-group"><label class="form-label">Nome completo</label><input id="reg-name" class="form-input" type="text" placeholder="João Silva" style="background:#0f172a;border-color:#334155;color:#f1f5f9"></div>
+        <div class="form-group"><label class="form-label">E-mail</label><input id="reg-email" class="form-input" type="email" placeholder="seu@email.com" style="background:#0f172a;border-color:#334155;color:#f1f5f9"></div>
+        <div class="form-group"><label class="form-label">Senha</label><input id="reg-password" class="form-input" type="password" placeholder="Mín. 8 caracteres" style="background:#0f172a;border-color:#334155;color:#f1f5f9"></div>
+        <button class="btn btn-primary" id="btn-register">Criar conta →</button>
+      </div>
       <p class="note">Ao continuar, você concorda com os <a href="#">Termos de Uso</a>.</p>
     </div>
   </div>
