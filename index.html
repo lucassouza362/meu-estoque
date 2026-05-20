@@ -151,7 +151,102 @@ tr:hover td{background:rgba(255,107,26,.03)}
 .date-filter-bar label{font-size:12px;color:var(--muted);font-weight:500}
 .date-filter-btn{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:var(--font);font-size:12px;padding:6px 12px;cursor:pointer;transition:all .2s}
 .date-filter-btn:hover,.date-filter-btn.active{background:rgba(30,64,175,.1);border-color:#1e40af;color:#1e40af}
-@media(max-width:768px){.sidebar{transform:translateX(-100%)}.main-content{margin-left:0;padding:16px}.stats{grid-template-columns:1fr 1fr}.config-row{grid-template-columns:1fr 120px 120px 32px}}
+/* ── MOBILE ── */
+@media(max-width:768px){
+  /* Sidebar vira barra inferior */
+  .sidebar{
+    width:100%;height:60px;
+    top:auto;bottom:0;left:0;right:0;
+    flex-direction:row;
+    border-right:none;border-top:1px solid #334155;
+    transform:none;z-index:100;
+  }
+  .sidebar-logo{display:none}
+  .sidebar-nav{
+    padding:0;flex:1;
+    display:flex;flex-direction:row;
+    align-items:center;justify-content:space-around;
+    overflow-x:auto;overflow-y:hidden;
+  }
+  .nav-section{display:none}
+  .nav-item{
+    flex-direction:column;gap:2px;
+    padding:6px 8px;margin:0;
+    font-size:9px;text-align:center;
+    border-radius:8px;min-width:52px;
+  }
+  .nav-item span{width:auto;font-size:18px}
+  .nav-item.active{
+    border-left:none;border-bottom:2px solid #3b82f6;
+    border-radius:8px 8px 0 0;margin-left:0;padding-left:8px;
+    background:rgba(255,255,255,.1);color:#bfdbfe;
+  }
+  .sidebar-user{display:none}
+  /* Botão trocar escritório na sidebar mobile */
+  #btn-trocar-escritorio{display:none !important}
+
+  /* Main content com padding bottom para a barra */
+  .main-content{margin-left:0;padding:16px;padding-bottom:80px}
+
+  /* Stats em 2 colunas */
+  .stats{grid-template-columns:1fr 1fr;gap:10px}
+  .stat-card{padding:14px 16px}
+  .stat-val{font-size:24px}
+  .stat-label{font-size:9px}
+
+  /* Topbar empilhado */
+  .topbar{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:16px}
+  .page-title{font-size:18px}
+  .card-actions{width:100%;flex-wrap:wrap}
+  .search-input{width:100%}
+
+  /* Cards */
+  .card-header{flex-direction:column;align-items:flex-start;gap:10px}
+
+  /* Tabelas com scroll horizontal */
+  table{font-size:12px}
+  th,td{padding:9px 12px}
+
+  /* Botões menores */
+  .btn-add{font-size:12px;padding:8px 14px}
+  .btn-sm,.btn-edit,.btn-del{padding:4px 8px;font-size:11px}
+
+  /* Modal tela cheia no mobile */
+  .modal-overlay{padding:0;align-items:flex-end}
+  .modal{border-radius:20px 20px 0 0;border-left:none;border-top:4px solid #1e40af;max-height:90vh;width:100%;padding:24px}
+
+  /* Date filter bar empilhado */
+  .date-filter-bar{gap:8px}
+  .date-filter-btn{font-size:11px;padding:5px 10px}
+
+  /* Config rows */
+  .config-row{grid-template-columns:1fr 100px 100px 32px;gap:8px}
+
+  /* Escritório screen */
+  #escritorio-screen .auth-left-content{max-width:100%}
+  #escritorio-cards{grid-template-columns:1fr 1fr !important}
+
+  /* Auth screen */
+  #auth-screen{flex-direction:column}
+  .auth-left{padding:32px 24px}
+  .auth-right{display:none}
+
+  /* Tela definir senha */
+  #set-password-screen{padding:16px;align-items:flex-end}
+  #set-password-screen > div{border-radius:20px 20px 0 0;padding:28px 24px}
+}
+
+/* Mobile pequeno */
+@media(max-width:380px){
+  .stats{grid-template-columns:1fr 1fr}
+  .nav-item{min-width:44px;font-size:8px;padding:5px 4px}
+  #escritorio-cards{grid-template-columns:1fr !important}
+}
+@media(max-width:768px){
+  #mobile-header{display:flex !important}
+  #mobile-spacer{display:block !important}
+  .main-content{padding-top:8px}
+}
 </style>
 </head>
 <body>
@@ -316,6 +411,18 @@ tr:hover td{background:rgba(255,107,26,.03)}
   </div>
 
   <div class="main-content">
+  <!-- Header mobile com avatar -->
+  <div id="mobile-header" style="display:none;position:fixed;top:0;left:0;right:0;height:52px;background:#1e293b;border-bottom:1px solid #334155;z-index:90;align-items:center;justify-content:space-between;padding:0 16px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;background:#1e40af;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px">📦</div>
+      <span style="font-size:15px;font-weight:800;color:#fff">Stock<span style="color:#3b82f6">OIM</span></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="mobile-escritorio-label" style="font-size:11px;color:#64748b"></span>
+      <div id="mobile-avatar" style="width:32px;height:32px;background:#1e40af;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;cursor:pointer" onclick="logout()">?</div>
+    </div>
+  </div>
+  <div style="height:52px;display:none" id="mobile-spacer"></div>
 
     <!-- DASHBOARD -->
     <div class="page-section active" id="page-dashboard">
@@ -604,6 +711,8 @@ async function enterApp(user){
   document.getElementById('user-name').textContent=name.split(' ')[0];
   document.getElementById('user-avatar').textContent=initials;
   document.getElementById('user-role-label').textContent=currentProfile.role.charAt(0).toUpperCase()+currentProfile.role.slice(1);
+  var mAvatar=document.getElementById('mobile-avatar');
+  if(mAvatar)mAvatar.textContent=initials;
   if(currentProfile.role==='admin'){document.getElementById('nav-section-admin').style.display='';document.getElementById('nav-config').style.display='';document.getElementById('nav-users').style.display='';document.getElementById('nav-audit').style.display='';document.getElementById('invite-section').style.display='block';}
   if(can('product'))document.getElementById('btn-new-product').style.display='';
   if(can('movement')){document.getElementById('btn-new-entrada').style.display='';document.getElementById('btn-new-saida').style.display='';}
@@ -685,6 +794,8 @@ function mostrarSelecaoEscritorio(){
 function entrarNoApp(){
   document.getElementById('escritorio-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
+  var mEscLabel=document.getElementById('mobile-escritorio-label');
+  if(mEscLabel){var en=currentEscritorio?(escritorios.find(function(e){return e.id===currentEscritorio;})||{name:''}).name:'Todos';mEscLabel.textContent=en;}
   // Botão trocar na sidebar
   var btnTrocar=document.getElementById('btn-trocar-escritorio');
   var podeEscolher=currentProfile.role==='admin'||userEscritorios.length>1;
