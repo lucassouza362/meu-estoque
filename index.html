@@ -428,6 +428,9 @@ tr:hover td{background:rgba(255,107,26,.03)}
     <div class="page-section active" id="page-dashboard">
       <div class="topbar">
         <div class="page-title">Dashboard<small id="last-update"></small></div>
+        <button id="btn-gerar-relatorio" style="display:none;background:#1e40af;border:none;border-radius:8px;color:#fff;padding:9px 16px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;display:none;align-items:center;gap:8px">
+          📄 Gerar relatório PDF
+        </button>
 
       </div>
       <!-- Filtro de data -->
@@ -713,7 +716,7 @@ async function enterApp(user){
   document.getElementById('user-role-label').textContent=currentProfile.role.charAt(0).toUpperCase()+currentProfile.role.slice(1);
   var mAvatar=document.getElementById('mobile-avatar');
   if(mAvatar)mAvatar.textContent=initials;
-  if(currentProfile.role==='admin'){document.getElementById('nav-section-admin').style.display='';document.getElementById('nav-config').style.display='';document.getElementById('nav-users').style.display='';document.getElementById('nav-audit').style.display='';document.getElementById('invite-section').style.display='block';}
+  if(currentProfile.role==='admin'){document.getElementById('nav-section-admin').style.display='';document.getElementById('nav-config').style.display='';document.getElementById('nav-users').style.display='';document.getElementById('nav-audit').style.display='';document.getElementById('invite-section').style.display='block';var btnRel=document.getElementById('btn-gerar-relatorio');if(btnRel)btnRel.style.display='flex';}
   if(can('product'))document.getElementById('btn-new-product').style.display='';
   if(can('movement')){document.getElementById('btn-new-entrada').style.display='';document.getElementById('btn-new-saida').style.display='';}
   var now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -1306,6 +1309,165 @@ async function sendInvite(){
   setTimeout(function(){loadUsers();},1500);
 }
 
+
+// ── RELATÓRIO PDF ──
+async function gerarRelatorio(){
+  var btn=document.getElementById('btn-gerar-relatorio');
+  btn.textContent='⏳ Gerando...';btn.disabled=true;
+
+  try{
+    var {jsPDF}=window.jspdf;
+    var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var pageW=doc.internal.pageSize.getWidth();
+    var pageH=doc.internal.pageSize.getHeight();
+    var now=new Date();
+    var dataHora=now.toLocaleString('pt-BR');
+    var escNome=currentEscritorio?(escritorios.find(function(e){return e.id===currentEscritorio;})||{name:'Todos os escritórios'}).name:'Todos os escritórios';
+
+    // ── CABEÇALHO ──
+    doc.setFillColor(30,64,175);
+    doc.rect(0,0,pageW,28,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(18);doc.setFont('helvetica','bold');
+    doc.text('StockOIM',14,12);
+    doc.setFontSize(9);doc.setFont('helvetica','normal');
+    doc.text('by Lucas Barbosa',14,18);
+    doc.setFontSize(10);
+    doc.text('Relatório de Estoque',14,24);
+    doc.setFontSize(9);
+    doc.text('Gerado em: '+dataHora,pageW-14,10,{align:'right'});
+    doc.text('Escritório: '+escNome,pageW-14,16,{align:'right'});
+    doc.text('Gerado por: '+(currentProfile.full_name||currentUser.email),pageW-14,22,{align:'right'});
+
+    var y=36;
+
+    // ── RESUMO ──
+    doc.setTextColor(15,23,42);
+    doc.setFontSize(12);doc.setFont('helvetica','bold');
+    doc.text('Resumo do Estoque',14,y);y+=6;
+
+    // Buscar produtos
+    var qp=sb.from('products').select('*').order('name');
+    if(currentEscritorio)qp=qp.eq('escritorio_id',currentEscritorio);
+    var {data:prods}=await qp;
+    prods=prods||[];
+
+    var total=prods.length;
+    var bom=prods.filter(function(p){return getStatus(p.qty,p.id).label==='Bom';}).length;
+    var atencao=prods.filter(function(p){return getStatus(p.qty,p.id).label==='Atenção';}).length;
+    var critico=prods.filter(function(p){return getStatus(p.qty,p.id).label==='Crítico';}).length;
+
+    // Cards de resumo
+    var cardW=42,cardH=16,cardX=14;
+    var cards=[
+      {label:'Total',val:total,r:30,g:64,b:175},
+      {label:'Bom',val:bom,r:16,g:185,b:129},
+      {label:'Atenção',val:atencao,r:245,g:158,b:11},
+      {label:'Crítico',val:critico,r:239,g:68,b:68}
+    ];
+    cards.forEach(function(c,i){
+      var cx=cardX+i*(cardW+4);
+      doc.setFillColor(c.r,c.g,c.b);
+      doc.roundedRect(cx,y,cardW,cardH,2,2,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(16);doc.setFont('helvetica','bold');
+      doc.text(String(c.val),cx+cardW/2,y+9,{align:'center'});
+      doc.setFontSize(7);doc.setFont('helvetica','normal');
+      doc.text(c.label,cx+cardW/2,y+14,{align:'center'});
+    });
+    y+=24;
+
+    // ── TABELA DE PRODUTOS ──
+    doc.setTextColor(15,23,42);
+    doc.setFontSize(12);doc.setFont('helvetica','bold');
+    doc.text('Produtos em Estoque',14,y);y+=4;
+
+    var prodRows=prods.map(function(p){
+      var s=getStatus(p.qty,p.id);
+      var cfg=productConfigs[p.id]||{atencao:10,critico:5};
+      return [p.name,p.category,p.sku,String(p.qty),'Atençao<='+cfg.atencao+' / Critico<='+cfg.critico,s.label];
+    });
+
+    doc.autoTable({
+      startY:y,
+      head:[['Produto','Categoria','SKU','Qtd.','Limites','Status']],
+      body:prodRows,
+      theme:'grid',
+      headStyles:{fillColor:[30,64,175],textColor:255,fontSize:8,fontStyle:'bold'},
+      bodyStyles:{fontSize:8,textColor:[15,23,42]},
+      columnStyles:{3:{halign:'center'},5:{halign:'center'}},
+      didParseCell:function(data){
+        if(data.section==='body'&&data.column.index===5){
+          var v=data.cell.raw;
+          if(v==='Bom')data.cell.styles.textColor=[16,185,129];
+          else if(v==='Atencao'||v==='Atenção')data.cell.styles.textColor=[245,158,11];
+          else if(v==='Critico'||v==='Crítico')data.cell.styles.textColor=[239,68,68];
+        }
+      },
+      margin:{left:14,right:14}
+    });
+
+    y=doc.lastAutoTable.finalY+10;
+
+    // ── NOVA PÁGINA SE NECESSÁRIO ──
+    if(y>pageH-60){doc.addPage();y=20;}
+
+    // ── ÚLTIMAS MOVIMENTAÇÕES ──
+    doc.setTextColor(15,23,42);
+    doc.setFontSize(12);doc.setFont('helvetica','bold');
+    doc.text('Últimas 30 Movimentações',14,y);y+=4;
+
+    var qm=sb.from('movements').select('*').order('created_at',{ascending:false}).limit(30);
+    if(currentEscritorio)qm=qm.eq('escritorio_id',currentEscritorio);
+    var {data:movs}=await qm;
+    movs=movs||[];
+
+    var movRows=movs.map(function(m){
+      var d=new Date(m.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+      var escN=(escritorios.find(function(e){return e.id===m.escritorio_id;})||{name:'-'}).name;
+      return [d,m.product_name,m.type==='entrada'?'Entrada':'Saída',String(m.qty),m.user_name||'-',m.note||'-'];
+    });
+
+    doc.autoTable({
+      startY:y,
+      head:[['Data/Hora','Produto','Tipo','Qtd.','Usuário','Obs.']],
+      body:movRows,
+      theme:'grid',
+      headStyles:{fillColor:[30,64,175],textColor:255,fontSize:8,fontStyle:'bold'},
+      bodyStyles:{fontSize:7,textColor:[15,23,42]},
+      didParseCell:function(data){
+        if(data.section==='body'&&data.column.index===2){
+          if(data.cell.raw==='Entrada')data.cell.styles.textColor=[16,185,129];
+          else data.cell.styles.textColor=[239,68,68];
+        }
+      },
+      margin:{left:14,right:14}
+    });
+
+    // ── RODAPÉ ──
+    var totalPages=doc.internal.getNumberOfPages();
+    for(var i=1;i<=totalPages;i++){
+      doc.setPage(i);
+      doc.setFillColor(248,250,252);
+      doc.rect(0,pageH-10,pageW,10,'F');
+      doc.setTextColor(100,116,139);
+      doc.setFontSize(7);doc.setFont('helvetica','normal');
+      doc.text('StockOIM — by Lucas Barbosa',14,pageH-4);
+      doc.text('Página '+i+' de '+totalPages,pageW-14,pageH-4,{align:'right'});
+    }
+
+    // ── DOWNLOAD ──
+    var fileName='StockOIM_Relatorio_'+now.toISOString().split('T')[0]+'.pdf';
+    doc.save(fileName);
+
+  }catch(err){
+    alert('Erro ao gerar relatório: '+err.message);
+    console.error(err);
+  }finally{
+    btn.textContent='📄 Gerar relatório PDF';btn.disabled=false;
+  }
+}
+
 // ── EVENTOS ──
 
 
@@ -1325,6 +1487,7 @@ document.getElementById('m-product').addEventListener('change',updateStockInfo);
 document.getElementById('btn-cancel-user').addEventListener('click',function(){document.getElementById('modal-user').classList.remove('open');});
 document.getElementById('btn-save-user').addEventListener('click',saveUser);
 document.getElementById('btn-save-config').addEventListener('click',saveConfig);
+document.getElementById('btn-gerar-relatorio').addEventListener('click',gerarRelatorio);
 document.getElementById('btn-invite').addEventListener('click',sendInvite);
 document.getElementById('invite-email').addEventListener('keydown',function(e){if(e.key==='Enter')sendInvite();});
 document.getElementById('btn-trocar-escritorio').addEventListener('click',function(){mostrarSelecaoEscritorio();});
