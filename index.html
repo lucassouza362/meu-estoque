@@ -1316,7 +1316,8 @@ async function gerarRelatorio(){
   btn.textContent='⏳ Gerando...';btn.disabled=true;
 
   try{
-    var {jsPDF}=window.jspdf;
+    var jsPDF=window.jspdf&&window.jspdf.jsPDF?window.jspdf.jsPDF:(window.jsPDF||null);
+    if(!jsPDF){alert('Biblioteca de PDF não carregou. Recarregue a página e tente novamente.');btn.textContent='📄 Gerar relatório PDF';btn.disabled=false;return;}
     var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     var pageW=doc.internal.pageSize.getWidth();
     var pageH=doc.internal.pageSize.getHeight();
