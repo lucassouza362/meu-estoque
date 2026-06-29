@@ -180,6 +180,10 @@ tr:hover td{background:#f8fbf9}
 /* ── BOTÃO RELATÓRIO PDF (gradiente) ── */
 .btn-report{background:linear-gradient(135deg,#2f9e5e,#1f7a47);border:none;border-radius:13px;color:#fff;padding:12px 20px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 20px rgba(31,122,71,.28);transition:filter .2s,transform .2s}
 .btn-report:hover{filter:brightness(1.06);transform:translateY(-1px)}
+/* ── GRÁFICOS DO DASHBOARD ── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.chart-card{margin-bottom:0}
+.chart-card canvas{max-width:100%}
 /* ── RODAPÉ ── */
 .app-footer{text-align:center;font-size:12px;color:#aab5ad;padding:24px 0 8px;font-family:var(--font)}
 /* ── MOBILE ── */
@@ -224,6 +228,9 @@ tr:hover td{background:#f8fbf9}
   .stat-card{padding:14px 16px}
   .stat-val{font-size:24px}
   .stat-label{font-size:9px}
+
+  /* Gráficos em 1 coluna no mobile */
+  .charts-grid{grid-template-columns:1fr;gap:12px}
 
   /* Topbar empilhado */
   .topbar{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:16px}
@@ -443,10 +450,65 @@ tr:hover td{background:#f8fbf9}
         <div class="stat-card" style="--kpi-color:#2563a8"><div class="stat-label"><span class="dot"></span>Entradas</div><div class="stat-val blue" id="stat-in-today">-</div><div style="font-size:11.5px;color:#9aa69e;margin-top:4px">no período</div></div>
         <div class="stat-card" style="--kpi-color:#5b4bc4"><div class="stat-label"><span class="dot"></span>Saídas</div><div class="stat-val purple" id="stat-out-today">-</div><div style="font-size:11.5px;color:#9aa69e;margin-top:4px">no período</div></div>
       </div>
+      <!-- GRÁFICOS -->
+      <div class="charts-grid">
+
+        <!-- Gráfico: Quantidade por produto -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <div class="card-title">Quantidade por produto</div>
+            <select class="search-input" id="chart-product-category" style="width:160px">
+              <option value="">Todas categorias</option>
+            </select>
+          </div>
+          <div style="padding:18px 22px"><canvas id="chart-by-product" height="220"></canvas></div>
+        </div>
+
+        <!-- Gráfico: Quantidade por categoria -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <div class="card-title">Quantidade por categoria</div>
+            <select class="search-input" id="chart-category-status" style="width:160px">
+              <option value="">Todos os status</option>
+              <option value="Bom">Bom</option>
+              <option value="Atenção">Atenção</option>
+              <option value="Crítico">Crítico</option>
+            </select>
+          </div>
+          <div style="padding:18px 22px"><canvas id="chart-by-category" height="220"></canvas></div>
+        </div>
+
+        <!-- Gráfico: Evolução de estoque -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <div class="card-title">Evolução de estoque</div>
+            <select class="search-input" id="chart-evolution-product" style="width:160px">
+              <option value="">Todos os produtos</option>
+            </select>
+          </div>
+          <div style="padding:18px 22px"><canvas id="chart-evolution" height="220"></canvas></div>
+        </div>
+
+        <!-- Gráfico: Entradas vs Saídas -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <div class="card-title">Entradas vs Saídas</div>
+            <select class="search-input" id="chart-movements-period" style="width:160px">
+              <option value="7">Últimos 7 dias</option>
+              <option value="14">Últimos 14 dias</option>
+              <option value="30" selected>Últimos 30 dias</option>
+            </select>
+          </div>
+          <div style="padding:18px 22px"><canvas id="chart-movements" height="220"></canvas></div>
+        </div>
+
+      </div>
+
+      <!-- RESUMO COMPACTO DA TABELA -->
       <div class="card">
         <div class="card-header">
           <div>
-            <div class="card-title">Produtos em estoque</div>
+            <div class="card-title">Resumo de produtos</div>
             <div id="dashboard-product-count" style="font-size:12px;color:var(--text-muted);margin-top:2px">0 de 0 produtos</div>
           </div>
           <div class="card-actions">
@@ -469,6 +531,9 @@ tr:hover td{background:#f8fbf9}
           <thead><tr><th>Produto</th><th>Categoria</th><th>SKU</th><th>Qtd. Estoque</th><th>Nível</th><th>Status</th></tr></thead>
           <tbody id="dashboard-products"></tbody>
         </table></div>
+        <div style="padding:14px 22px;border-top:1px solid var(--border);text-align:center">
+          <span id="dashboard-more-link" style="font-size:13px;color:var(--brand-700);font-weight:600;cursor:pointer">Ver todos os produtos →</span>
+        </div>
       </div>
     </div>
 
@@ -658,7 +723,13 @@ tr:hover td{background:#f8fbf9}
 (function(){
   var sdk = document.createElement('script');
   sdk.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js';
-  sdk.onload = function(){ initApp(); };
+  sdk.onload = function(){
+    var chartSdk = document.createElement('script');
+    chartSdk.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
+    chartSdk.onload = function(){ initApp(); };
+    chartSdk.onerror = function(){ initApp(); }; // app funciona mesmo sem gráficos
+    document.head.appendChild(chartSdk);
+  };
   sdk.onerror = function(){ document.body.innerHTML='<div style="color:#e0454b;font-family:sans-serif;padding:40px;font-size:16px">Erro ao carregar dependências. Verifique sua conexão e recarregue a página.</div>'; };
   document.head.appendChild(sdk);
 })();
@@ -885,7 +956,7 @@ async function loadDashboard(){
     var mv=await qMv;
     if(mv.data){document.getElementById('stat-in-today').textContent=mv.data.filter(function(m){return m.type==='entrada';}).length;document.getElementById('stat-out-today').textContent=mv.data.filter(function(m){return m.type==='saida';}).length;}
   }
-  // Tabela
+  // Tabela resumo (limitada, priorizando produtos em Crítico/Atenção)
   var filtered=allProducts.filter(function(p){
     var s=getStatus(p.qty,p.id);
     var matchQ=!q||(p.name.toLowerCase().includes(q)||p.category.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q));
@@ -894,17 +965,270 @@ async function loadDashboard(){
   });
   var countEl=document.getElementById('dashboard-product-count');
   if(countEl)countEl.textContent=filtered.length+' de '+allProducts.length+' produtos';
+  var statusOrder={'Crítico':0,'Atenção':1,'Bom':2};
+  var sortedForSummary=filtered.slice().sort(function(a,b){
+    return statusOrder[getStatus(a.qty,a.id).label]-statusOrder[getStatus(b.qty,b.id).label];
+  });
+  var SUMMARY_LIMIT=8;
+  var summaryRows=sortedForSummary.slice(0,SUMMARY_LIMIT);
   var tbody=document.getElementById('dashboard-products');
-  if(!filtered.length){tbody.innerHTML='<tr class="empty-row"><td colspan="6">Nenhum produto encontrado. Tente ajustar a busca ou os filtros.</td></tr>';return;}
-  tbody.innerHTML=filtered.map(function(p){
-    var s=getStatus(p.qty,p.id);
-    var pct=Math.min(100,(p.qty/200)*100);
-    var qtyColor=p.qty===0?'var(--danger)':'var(--text)';
-    return '<tr><td><strong>'+p.name+'</strong></td><td>'+categoryPill(p.category)+'</td><td><span class="sku-badge">'+p.sku+'</span></td>'
-      +'<td style="text-align:right"><strong style="font-family:var(--font-head);font-size:16px;color:'+qtyColor+'">'+p.qty+'</strong></td>'
-      +'<td><div class="level-track"><div class="level-fill" style="width:'+pct+'%;background:'+levelBarColor(s.label)+'"></div></div></td>'
-      +'<td><span class="badge '+s.cls+'">'+s.label+'</span></td></tr>';
-  }).join('');
+  if(!filtered.length){tbody.innerHTML='<tr class="empty-row"><td colspan="6">Nenhum produto encontrado. Tente ajustar a busca ou os filtros.</td></tr>';}
+  else{
+    tbody.innerHTML=summaryRows.map(function(p){
+      var s=getStatus(p.qty,p.id);
+      var pct=Math.min(100,(p.qty/200)*100);
+      var qtyColor=p.qty===0?'var(--danger)':'var(--text)';
+      return '<tr><td><strong>'+p.name+'</strong></td><td>'+categoryPill(p.category)+'</td><td><span class="sku-badge">'+p.sku+'</span></td>'
+        +'<td style="text-align:right"><strong style="font-family:var(--font-head);font-size:16px;color:'+qtyColor+'">'+p.qty+'</strong></td>'
+        +'<td><div class="level-track"><div class="level-fill" style="width:'+pct+'%;background:'+levelBarColor(s.label)+'"></div></div></td>'
+        +'<td><span class="badge '+s.cls+'">'+s.label+'</span></td></tr>';
+    }).join('');
+  }
+  var moreLink=document.getElementById('dashboard-more-link');
+  if(moreLink)moreLink.style.display=filtered.length>SUMMARY_LIMIT?'':'none';
+  // Renderizar gráficos (não bloqueia o resto do dashboard se falhar)
+  try{ renderDashboardCharts(); }catch(e){ console.warn('Gráficos indisponíveis:',e); }
+}
+
+// ── GRÁFICOS DO DASHBOARD ──
+var chartInstances={};
+var chartsFiltersInitialized=false;
+
+function destroyChart(id){
+  if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}
+}
+
+function chartColors(){
+  return {brand900:'#10261c',brand600:'#2f9e5e',brand700:'#1f7a47',warn:'#e8a91e',danger:'#e0454b',info:'#2563a8',purple:'#5b4bc4',grid:'#e6ebe7',text:'#69776e'};
+}
+
+function baseChartOptions(extra){
+  var c=chartColors();
+  var opts={
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#10261c',titleFont:{family:'Be Vietnam Pro',weight:'600'},bodyFont:{family:'Be Vietnam Pro'},padding:10,cornerRadius:8}},
+    scales:{
+      x:{grid:{display:false},ticks:{color:c.text,font:{family:'Be Vietnam Pro',size:11}}},
+      y:{grid:{color:c.grid},ticks:{color:c.text,font:{family:'Be Vietnam Pro',size:11}},beginAtZero:true}
+    }
+  };
+  if(extra)Object.assign(opts,extra);
+  return opts;
+}
+
+function initChartsFilters(){
+  if(chartsFiltersInitialized)return;
+  chartsFiltersInitialized=true;
+  document.getElementById('chart-product-category').addEventListener('change',renderChartByProduct);
+  document.getElementById('chart-category-status').addEventListener('change',renderChartByCategory);
+  document.getElementById('chart-evolution-product').addEventListener('change',renderChartEvolution);
+  document.getElementById('chart-movements-period').addEventListener('change',renderChartMovements);
+}
+
+function populateChartFilterOptions(){
+  // Categorias (para o filtro do gráfico por produto)
+  var cats=[...new Set(allProducts.map(function(p){return p.category;}))].filter(Boolean).sort();
+  var catSel=document.getElementById('chart-product-category');
+  var prevCat=catSel.value;
+  catSel.innerHTML='<option value="">Todas categorias</option>'+cats.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+  if(cats.includes(prevCat))catSel.value=prevCat;
+  // Produtos (para o filtro do gráfico de evolução)
+  var prodSel=document.getElementById('chart-evolution-product');
+  var prevProd=prodSel.value;
+  var sortedProds=allProducts.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
+  prodSel.innerHTML='<option value="">Todos os produtos</option>'+sortedProds.map(function(p){return '<option value="'+p.id+'">'+p.name+'</option>';}).join('');
+  if(sortedProds.some(function(p){return p.id===prevProd;}))prodSel.value=prevProd;
+}
+
+function renderDashboardCharts(){
+  if(typeof Chart==='undefined')return; // Chart.js não carregou — dashboard segue funcionando sem gráficos
+  initChartsFilters();
+  populateChartFilterOptions();
+  renderChartByProduct();
+  renderChartByCategory();
+  renderChartEvolution();
+  renderChartMovements();
+}
+
+// 1. Quantidade por produto (barras) — filtro: categoria
+function renderChartByProduct(){
+  var cat=document.getElementById('chart-product-category').value;
+  var c=chartColors();
+  var list=allProducts.filter(function(p){return !cat||p.category===cat;});
+  list=list.slice().sort(function(a,b){return b.qty-a.qty;}).slice(0,10);
+  var ctx=document.getElementById('chart-by-product');
+  destroyChart('byProduct');
+  if(!list.length){ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);return;}
+  chartInstances.byProduct=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:list.map(function(p){return p.name.length>14?p.name.slice(0,14)+'…':p.name;}),
+      datasets:[{
+        data:list.map(function(p){return p.qty;}),
+        backgroundColor:list.map(function(p){return levelBarColorRaw(getStatus(p.qty,p.id).label,c);}),
+        borderRadius:6,maxBarThickness:28
+      }]
+    },
+    options:baseChartOptions({plugins:{legend:{display:false},tooltip:{backgroundColor:'#10261c',padding:10,cornerRadius:8}}})
+  });
+}
+
+// 2. Quantidade por categoria (donut) — filtro: status
+function renderChartByCategory(){
+  var statusFilter=document.getElementById('chart-category-status').value;
+  var c=chartColors();
+  var list=allProducts.filter(function(p){return !statusFilter||getStatus(p.qty,p.id).label===statusFilter;});
+  var totals={};
+  list.forEach(function(p){totals[p.category]=(totals[p.category]||0)+p.qty;});
+  var cats=Object.keys(totals).sort(function(a,b){return totals[b]-totals[a];});
+  var ctx=document.getElementById('chart-by-category');
+  destroyChart('byCategory');
+  if(!cats.length){ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);return;}
+  chartInstances.byCategory=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:cats,
+      datasets:[{
+        data:cats.map(function(cat){return totals[cat];}),
+        backgroundColor:cats.map(function(cat){return getCategoryColor(cat).fg;}),
+        borderWidth:2,borderColor:'#ffffff'
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{
+        legend:{position:'bottom',labels:{font:{family:'Be Vietnam Pro',size:11},color:c.text,boxWidth:10,padding:12}},
+        tooltip:{backgroundColor:'#10261c',padding:10,cornerRadius:8}
+      }
+    }
+  });
+}
+
+// 3. Evolução de estoque por data (linha) — filtro: produto
+async function renderChartEvolution(){
+  var productId=document.getElementById('chart-evolution-product').value;
+  var c=chartColors();
+  var ctx=document.getElementById('chart-evolution');
+  destroyChart('evolution');
+
+  var qm=sb.from('movements').select('created_at,type,qty,product_id').order('created_at',{ascending:true});
+  if(currentEscritorio)qm=qm.eq('escritorio_id',currentEscritorio);
+  if(productId)qm=qm.eq('product_id',productId);
+  else qm=qm.limit(500); // sem produto selecionado, agrega tudo (limitado para performance)
+  var res=await qm;
+  var movs=res.data||[];
+
+  if(!movs.length){ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);return;}
+
+  // Agrupar por dia, somando o delta (entrada=+qty, saida=-qty), depois acumular
+  var byDay={};
+  movs.forEach(function(m){
+    var day=m.created_at.split('T')[0];
+    var delta=m.type==='entrada'?m.qty:-m.qty;
+    byDay[day]=(byDay[day]||0)+delta;
+  });
+  var days=Object.keys(byDay).sort();
+  // Ponto de partida: estoque atual menos a soma total de deltas no período = estoque "antes" do primeiro dia
+  var currentQty=0;
+  if(productId){
+    var p=allProducts.find(function(x){return x.id===productId;});
+    currentQty=p?p.qty:0;
+  } else {
+    currentQty=allProducts.reduce(function(sum,p){return sum+p.qty;},0);
+  }
+  var totalDelta=days.reduce(function(sum,d){return sum+byDay[d];},0);
+  var running=currentQty-totalDelta;
+  var dataPoints=[];
+  days.forEach(function(d){
+    running+=byDay[d];
+    dataPoints.push(running);
+  });
+
+  chartInstances.evolution=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:days.map(function(d){var parts=d.split('-');return parts[2]+'/'+parts[1];}),
+      datasets:[{
+        data:dataPoints,
+        borderColor:c.brand600,
+        backgroundColor:'rgba(47,158,94,.12)',
+        fill:true,tension:.3,pointRadius:3,pointBackgroundColor:c.brand700,borderWidth:2.5
+      }]
+    },
+    options:baseChartOptions()
+  });
+}
+
+// 4. Entradas vs Saídas por período (barras agrupadas) — filtro: período em dias
+async function renderChartMovements(){
+  var days=parseInt(document.getElementById('chart-movements-period').value)||30;
+  var c=chartColors();
+  var ctx=document.getElementById('chart-movements');
+  destroyChart('movements');
+
+  var from=new Date();from.setDate(from.getDate()-(days-1));
+  var fromStr=from.toISOString().split('T')[0]+'T00:00:00';
+
+  var qm=sb.from('movements').select('created_at,type,qty').gte('created_at',fromStr);
+  if(currentEscritorio)qm=qm.eq('escritorio_id',currentEscritorio);
+  var res=await qm;
+  var movs=res.data||[];
+
+  // Gerar todos os dias do período (mesmo sem movimentação) para o eixo X ficar contínuo
+  var dayKeys=[];
+  for(var i=0;i<days;i++){
+    var d=new Date(from);d.setDate(d.getDate()+i);
+    dayKeys.push(d.toISOString().split('T')[0]);
+  }
+  var entradasByDay={},saidasByDay={};
+  dayKeys.forEach(function(d){entradasByDay[d]=0;saidasByDay[d]=0;});
+  movs.forEach(function(m){
+    var day=m.created_at.split('T')[0];
+    if(!(day in entradasByDay))return;
+    if(m.type==='entrada')entradasByDay[day]+=m.qty;
+    else saidasByDay[day]+=m.qty;
+  });
+
+  // Se o período for longo, agrupa por semana para não poluir o eixo
+  var useWeekly=days>14;
+  var labels,entradasData,saidasData;
+  if(useWeekly){
+    var weekMap={};
+    dayKeys.forEach(function(d,idx){
+      var weekIdx=Math.floor(idx/7);
+      var key='Sem. '+(weekIdx+1);
+      weekMap[key]=weekMap[key]||{e:0,s:0};
+      weekMap[key].e+=entradasByDay[d];
+      weekMap[key].s+=saidasByDay[d];
+    });
+    labels=Object.keys(weekMap);
+    entradasData=labels.map(function(k){return weekMap[k].e;});
+    saidasData=labels.map(function(k){return weekMap[k].s;});
+  } else {
+    labels=dayKeys.map(function(d){var parts=d.split('-');return parts[2]+'/'+parts[1];});
+    entradasData=dayKeys.map(function(d){return entradasByDay[d];});
+    saidasData=dayKeys.map(function(d){return saidasByDay[d];});
+  }
+
+  chartInstances.movements=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:labels,
+      datasets:[
+        {label:'Entradas',data:entradasData,backgroundColor:c.brand600,borderRadius:5,maxBarThickness:22},
+        {label:'Saídas',data:saidasData,backgroundColor:c.danger,borderRadius:5,maxBarThickness:22}
+      ]
+    },
+    options:baseChartOptions({
+      plugins:{legend:{display:true,position:'bottom',labels:{font:{family:'Be Vietnam Pro',size:11},color:chartColors().text,boxWidth:10,padding:12}},tooltip:{backgroundColor:'#10261c',padding:10,cornerRadius:8}}
+    })
+  });
+}
+
+function levelBarColorRaw(label,c){
+  if(label==='Bom')return c.brand600;
+  if(label==='Atenção')return c.warn;
+  return c.danger;
 }
 
 // ── PRODUTOS ──
@@ -1452,6 +1776,7 @@ document.getElementById('btn-trocar-escritorio').addEventListener('click',functi
 document.getElementById('btn-ver-todos').addEventListener('click',function(){currentEscritorio=null;entrarNoApp();});
 document.getElementById('search-dashboard').addEventListener('input',loadDashboard);
 document.getElementById('filter-status').addEventListener('change',loadDashboard);
+document.getElementById('dashboard-more-link').addEventListener('click',function(){navigateTo('products');});
 document.getElementById('search-products').addEventListener('input',loadProducts);
 document.getElementById('search-movements').addEventListener('input',loadMovements);
 document.getElementById('search-audit').addEventListener('input',loadAudit);
