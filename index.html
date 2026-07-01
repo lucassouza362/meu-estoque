@@ -1678,67 +1678,166 @@ async function gerarRelatorio(){
     var now=new Date();
     var dataHora=now.toLocaleString('pt-BR');
     var escNome=currentEscritorio?(escritorios.find(function(e){return e.id===currentEscritorio;})||{name:'Todos'}).name:'Todos os escritórios';
-    // Buscar dados
+
+    // ── Buscar produtos ──
     var qp=sb.from('products').select('*').order('name');
     if(currentEscritorio)qp=qp.eq('escritorio_id',currentEscritorio);
     var rp=await qp; var prods=rp.data||[];
-    var qm=sb.from('movements').select('*').order('created_at',{ascending:false}).limit(30);
+
+    // ── Buscar movimentações dos últimos 7 dias ──
+    var from7=new Date(now);from7.setDate(from7.getDate()-6);
+    var from7str=from7.toISOString().split('T')[0]+'T00:00:00';
+    var qm=sb.from('movements').select('*').gte('created_at',from7str).order('created_at',{ascending:false});
     if(currentEscritorio)qm=qm.eq('escritorio_id',currentEscritorio);
     var rm=await qm; var movs=rm.data||[];
+
+    // ── Calcular KPIs ──
     var total=prods.length;
-    var bom=prods.filter(function(p){return getStatus(p.qty,p.id).label==='Bom';}).length;
-    var atencao=prods.filter(function(p){return getStatus(p.qty,p.id).label==='Atenção';}).length;
-    var critico=prods.filter(function(p){return getStatus(p.qty,p.id).label==='Crítico';}).length;
-    // Gerar linhas de produtos
+    var bomList=prods.filter(function(p){return getStatus(p.qty,p.id).label==='Bom';});
+    var atencaoList=prods.filter(function(p){return getStatus(p.qty,p.id).label==='Atenção';});
+    var criticoList=prods.filter(function(p){return getStatus(p.qty,p.id).label==='Crítico';});
+    var totalEntradas=movs.filter(function(m){return m.type==='entrada';}).reduce(function(s,m){return s+m.qty;},0);
+    var totalSaidas=movs.filter(function(m){return m.type==='saida';}).reduce(function(s,m){return s+m.qty;},0);
+
+    // ── Linhas da tabela de alertas (Crítico + Atenção) ──
+    var alertas=criticoList.concat(atencaoList);
+    var alertRows=alertas.length?alertas.map(function(p){
+      var s=getStatus(p.qty,p.id);
+      var cor=s.label==='Crítico'?'#dc2626':'#d97706';
+      var bg=s.label==='Crítico'?'#fff1f2':'#fffbeb';
+      var cfg=productConfigs[p.id]||{atencao:10,critico:5};
+      return '<tr style="background:'+bg+'">'
+        +'<td><strong>'+p.name+'</strong></td>'
+        +'<td>'+p.category+'</td>'
+        +'<td>'+p.sku+'</td>'
+        +'<td style="text-align:center;font-size:16px;font-weight:800;color:'+cor+'">'+p.qty+'</td>'
+        +'<td style="text-align:center;font-size:11px">A≤'+cfg.atencao+' / C≤'+cfg.critico+'</td>'
+        +'<td style="text-align:center"><span style="background:'+bg+';color:'+cor+';font-weight:700;padding:2px 8px;border-radius:20px;font-size:11px">'+s.label+'</span></td>'
+        +'</tr>';
+    }).join(''):'<tr><td colspan="6" style="text-align:center;padding:16px;color:#64748b">✅ Nenhum produto em estado crítico ou de atenção</td></tr>';
+
+    // ── Linhas da tabela de todos os produtos ──
     var prodRows=prods.map(function(p){
       var s=getStatus(p.qty,p.id);
-      var cor=s.label==='Bom'?'#10b981':s.label==='Atenção'?'#f59e0b':'#ef4444';
+      var cor=s.label==='Bom'?'#16a34a':s.label==='Atenção'?'#d97706':'#dc2626';
       var cfg=productConfigs[p.id]||{atencao:10,critico:5};
-      return '<tr><td>'+p.name+'</td><td>'+p.category+'</td><td>'+p.sku+'</td><td style="text-align:center"><strong>'+p.qty+'</strong></td><td style="text-align:center;font-size:11px">A≤'+cfg.atencao+' / C≤'+cfg.critico+'</td><td style="text-align:center"><span style="color:'+cor+';font-weight:700">'+s.label+'</span></td></tr>';
+      return '<tr>'
+        +'<td>'+p.name+'</td>'
+        +'<td>'+p.category+'</td>'
+        +'<td style="font-family:monospace">'+p.sku+'</td>'
+        +'<td style="text-align:center;font-weight:700">'+p.qty+'</td>'
+        +'<td style="text-align:center;font-size:11px;color:#64748b">A≤'+cfg.atencao+' / C≤'+cfg.critico+'</td>'
+        +'<td style="text-align:center"><span style="color:'+cor+';font-weight:600">'+s.label+'</span></td>'
+        +'</tr>';
     }).join('');
-    // Gerar linhas de movimentações
-    var movRows=movs.map(function(m){
+
+    // ── Linhas das movimentações (7 dias) ──
+    var movRows=movs.length?movs.map(function(m){
       var d=new Date(m.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
-      var cor=m.type==='entrada'?'#10b981':'#ef4444';
-      var tipo=m.type==='entrada'?'Entrada':'Saída';
-      return '<tr><td>'+d+'</td><td>'+m.product_name+'</td><td style="text-align:center"><span style="color:'+cor+';font-weight:700">'+tipo+'</span></td><td style="text-align:center"><strong>'+m.qty+'</strong></td><td>'+(m.user_name||'-')+'</td><td>'+(m.note||'-')+'</td></tr>';
-    }).join('');
-    // Montar HTML do relatório
-    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório StockOIM</title><style>'
+      var cor=m.type==='entrada'?'#16a34a':'#dc2626';
+      var tipo=m.type==='entrada'?'↑ Entrada':'↓ Saída';
+      return '<tr>'
+        +'<td style="color:#64748b;white-space:nowrap">'+d+'</td>'
+        +'<td><strong>'+m.product_name+'</strong></td>'
+        +'<td style="text-align:center"><span style="color:'+cor+';font-weight:700">'+tipo+'</span></td>'
+        +'<td style="text-align:center;font-weight:700;color:'+cor+'">'+m.qty+'</td>'
+        +'<td style="color:#64748b">'+(m.user_name||'-')+'</td>'
+        +'<td style="color:#64748b">'+(m.note||'-')+'</td>'
+        +'</tr>';
+    }).join(''):'<tr><td colspan="6" style="text-align:center;padding:16px;color:#64748b">Nenhuma movimentação nos últimos 7 dias</td></tr>';
+
+    // ── Datas do período ──
+    var periodoStr=from7.toLocaleDateString('pt-BR')+' a '+now.toLocaleDateString('pt-BR');
+
+    // ── Montar HTML do relatório ──
+    var html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'
+      +'<title>Relatório StockOIM — '+dataHora+'</title><style>'
       +'*{margin:0;padding:0;box-sizing:border-box}'
-      +'body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b;padding:24px;background:#fff}'
-      +'.header{background:#f8fafc;border:1px solid #e2e8f0;border-left:5px solid #2f9e5e;padding:16px 20px;border-radius:6px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}'
-      +'.header h1{font-size:20px;font-weight:800;color:#1e293b}'
-      +'.header .sub{font-size:10px;color:#64748b;margin-top:2px}'
-      +'.header .info{text-align:right;font-size:10px;color:#64748b}'
-      +'.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}'
-      +'.card{border-radius:6px;padding:14px;text-align:center;border:1px solid}'
-      +'.card .num{font-size:26px;font-weight:800}'
-      +'.card .lbl{font-size:10px;margin-top:2px;color:#64748b}'
-      +'h2{font-size:13px;font-weight:700;margin-bottom:8px;color:#1e293b;border-bottom:1px solid #e2e8f0;padding-bottom:6px;text-transform:uppercase;letter-spacing:.5px}'
-      +'table{width:100%;border-collapse:collapse;margin-bottom:24px}'
-      +'th{background:#f1f5f9;color:#475569;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e2e8f0}'
-      +'td{padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:11px;color:#334155}'
-      +'tr:nth-child(even) td{background:#fafafa}'
-      +'.footer{margin-top:20px;text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px}'
-      +'@media print{body{padding:10px}.header{-webkit-print-color-adjust:exact;print-color-adjust:exact}.card{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+      +'body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b;padding:24px;background:#fff;line-height:1.5}'
+
+      // Cabeçalho
+      +'.header{border-left:5px solid #2f9e5e;padding:14px 18px;margin-bottom:22px;background:#f8fdf9;border-radius:0 8px 8px 0;display:flex;justify-content:space-between;align-items:flex-start}'
+      +'.header-left h1{font-size:22px;font-weight:800;color:#10261c;letter-spacing:-.3px}'
+      +'.header-left .sub{font-size:11px;color:#69776e;margin-top:3px}'
+      +'.header-right{text-align:right;font-size:11px;color:#69776e;line-height:1.8}'
+
+      // KPI cards (6)
+      +'.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:22px}'
+      +'.kpi{border-radius:8px;padding:12px;text-align:center;border:1px solid}'
+      +'.kpi .num{font-size:22px;font-weight:800;line-height:1}'
+      +'.kpi .lbl{font-size:9px;color:#64748b;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}'
+
+      // Seções
+      +'h2{font-size:12px;font-weight:700;color:#10261c;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #e6ebe7;display:flex;align-items:center;gap:6px}'
+      +'.section{margin-bottom:22px}'
+      +'.alerta-banner{background:#fff1f2;border:1px solid #fecdd3;border-radius:6px;padding:8px 14px;font-size:11px;color:#dc2626;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}'
+      +'.ok-banner{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 14px;font-size:11px;color:#16a34a;font-weight:600;margin-bottom:10px}'
+
+      // Tabelas
+      +'table{width:100%;border-collapse:collapse;margin-bottom:4px;font-size:11px}'
+      +'th{background:#f1f5f2;color:#69776e;padding:7px 10px;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #e6ebe7;font-weight:700}'
+      +'td{padding:7px 10px;border-bottom:1px solid #f1f4f1;color:#334155;vertical-align:middle}'
+      +'tr:hover td{background:#fafcfa}'
+
+      // Rodapé
+      +'.footer{margin-top:24px;text-align:center;font-size:10px;color:#aab5ad;border-top:1px solid #e6ebe7;padding-top:12px}'
+
+      +'@media print{'
+      +'body{padding:12px}'
+      +'.kpi{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+      +'.alerta-banner,.ok-banner{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+      +'tr[style]{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+      +'h2{break-after:avoid}.section{break-inside:avoid}'
+      +'}'
       +'</style></head><body>'
-      +'<div class="header"><div><h1>StockOIM</h1><div class="sub">Relatório de Estoque</div></div>'
-      +'<div class="info"><div>Gerado em: '+dataHora+'</div><div>Escritório: '+escNome+'</div><div>Por: '+(currentProfile.full_name||currentUser.email)+'</div></div></div>'
-      +'<div class="cards">'
-      +'<div class="card" style="background:#eff6ff;border-color:#bff0d3"><div class="num" style="color:#2f9e5e">'+total+'</div><div class="lbl">Total de produtos</div></div>'
-      +'<div class="card" style="background:#f0fdf4;border-color:#bbf7d0"><div class="num" style="color:#16a34a">'+bom+'</div><div class="lbl">Bom</div></div>'
-      +'<div class="card" style="background:#fffbeb;border-color:#fde68a"><div class="num" style="color:#d97706">'+atencao+'</div><div class="lbl">Atenção</div></div>'
-      +'<div class="card" style="background:#fff1f2;border-color:#fecdd3"><div class="num" style="color:#dc2626">'+critico+'</div><div class="lbl">Crítico</div></div>'
+
+      // ── Cabeçalho ──
+      +'<div class="header">'
+        +'<div class="header-left"><h1>StockOIM</h1><div class="sub">Relatório de Estoque</div></div>'
+        +'<div class="header-right">'
+          +'<div><strong>Escritório:</strong> '+escNome+'</div>'
+          +'<div><strong>Gerado por:</strong> '+(currentProfile.full_name||currentUser.email)+'</div>'
+          +'<div><strong>Data:</strong> '+dataHora+'</div>'
+        +'</div>'
       +'</div>'
-      +'<h2>Produtos em Estoque</h2>'
-      +'<table><thead><tr><th>Produto</th><th>Categoria</th><th>SKU</th><th>Qtd.</th><th>Limites</th><th>Status</th></tr></thead><tbody>'+prodRows+'</tbody></table>'
-      +'<h2>Últimas 30 Movimentações</h2>'
-      +'<table><thead><tr><th>Data/Hora</th><th>Produto</th><th>Tipo</th><th>Qtd.</th><th>Usuário</th><th>Obs.</th></tr></thead><tbody>'+movRows+'</tbody></table>'
-      +'<div class="footer">StockOIM | Gerado em '+dataHora+'</div>'
+
+      // ── KPIs (6 cards) ──
+      +'<div class="kpis">'
+        +'<div class="kpi" style="background:#f0fdf4;border-color:#bbf7d0"><div class="num" style="color:#10261c">'+total+'</div><div class="lbl">Total</div></div>'
+        +'<div class="kpi" style="background:#f0fdf4;border-color:#bbf7d0"><div class="num" style="color:#16a34a">'+bomList.length+'</div><div class="lbl">Bom</div></div>'
+        +'<div class="kpi" style="background:#fffbeb;border-color:#fde68a"><div class="num" style="color:#d97706">'+atencaoList.length+'</div><div class="lbl">Atenção</div></div>'
+        +'<div class="kpi" style="background:#fff1f2;border-color:#fecdd3"><div class="num" style="color:#dc2626">'+criticoList.length+'</div><div class="lbl">Crítico</div></div>'
+        +'<div class="kpi" style="background:#eff6ff;border-color:#bfdbfe"><div class="num" style="color:#2563a8">'+totalEntradas+'</div><div class="lbl">Entradas (7d)</div></div>'
+        +'<div class="kpi" style="background:#fdf4ff;border-color:#e9d5ff"><div class="num" style="color:#7c3aed">'+totalSaidas+'</div><div class="lbl">Saídas (7d)</div></div>'
+      +'</div>'
+
+      // ── Seção 1: Alertas ──
+      +'<div class="section">'
+        +'<h2>⚠️ Alertas de Estoque</h2>'
+        +(alertas.length
+          ?'<div class="alerta-banner">⚠️ '+alertas.length+' produto(s) precisam de atenção imediata</div>'
+          :'<div class="ok-banner">✅ Todos os produtos estão com estoque adequado</div>'
+        )
+        +(alertas.length?'<table><thead><tr><th>Produto</th><th>Categoria</th><th>SKU</th><th style="text-align:center">Qtd.</th><th style="text-align:center">Limites</th><th style="text-align:center">Status</th></tr></thead><tbody>'+alertRows+'</tbody></table>':'')
+      +'</div>'
+
+      // ── Seção 2: Todos os produtos ──
+      +'<div class="section">'
+        +'<h2>📦 Produtos em Estoque <span style="font-size:10px;font-weight:400;color:#69776e;text-transform:none;letter-spacing:0">('+total+' produtos)</span></h2>'
+        +'<table><thead><tr><th>Produto</th><th>Categoria</th><th>SKU</th><th style="text-align:center">Qtd.</th><th style="text-align:center">Limites</th><th style="text-align:center">Status</th></tr></thead><tbody>'+prodRows+'</tbody></table>'
+      +'</div>'
+
+      // ── Seção 3: Movimentações 7 dias ──
+      +'<div class="section">'
+        +'<h2>🔄 Movimentações dos Últimos 7 Dias <span style="font-size:10px;font-weight:400;color:#69776e;text-transform:none;letter-spacing:0">('+periodoStr+' · '+movs.length+' registro(s))</span></h2>'
+        +'<table><thead><tr><th>Data/Hora</th><th>Produto</th><th style="text-align:center">Tipo</th><th style="text-align:center">Qtd.</th><th>Usuário</th><th>Observação</th></tr></thead><tbody>'+movRows+'</tbody></table>'
+      +'</div>'
+
+      +'<div class="footer">StockOIM · Relatório gerado em '+dataHora+' · Escritório: '+escNome+'</div>'
       +'</body></html>';
+
     // Abrir janela de impressão
-    var win=window.open('','_blank','width=900,height=700');
+    var win=window.open('','_blank','width=960,height=750');
     win.document.write(html);
     win.document.close();
     win.onload=function(){win.focus();win.print();};
