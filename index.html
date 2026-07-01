@@ -1984,23 +1984,21 @@ async function enviarRelatorio(){
       +'</div>'
       +'</div></body></html>';
 
-    // Enviar para cada admin via Resend API
+    // Enviar via Edge Function (evita CORS)
+    var subject='Relatório de Estoque — '+escNome+' — '+new Date().toLocaleDateString('pt-BR');
+    var toEmails=adminEmails.map(function(a){return a.email;});
+    var resp=await fetch(SUPABASE_URL+'/functions/v1/send-report',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':'Bearer '+SUPABASE_KEY,
+        'apikey':SUPABASE_KEY
+      },
+      body:JSON.stringify({to:toEmails,subject:subject,html:emailHtml})
+    });
     var enviados=0;var erros=[];
-    for(var i=0;i<adminEmails.length;i++){
-      var dest=adminEmails[i];
-      var resp=await fetch('https://api.resend.com/emails',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+RESEND_KEY},
-        body:JSON.stringify({
-          from:'StockOIM <onboarding@resend.dev>',
-          to:[dest.email],
-          subject:'📦 Relatório de Estoque — '+escNome+' — '+new Date().toLocaleDateString('pt-BR'),
-          html:emailHtml
-        })
-      });
-      if(resp.ok)enviados++;
-      else{var err=await resp.json();erros.push(dest.email+': '+(err.message||'erro desconhecido'));}
-    }
+    if(resp.ok){enviados=adminEmails.length;}
+    else{var errData=await resp.json();erros.push(errData.error||'Erro desconhecido');}
 
     if(erros.length){
       alert('Enviado para '+enviados+' admin(s). Erros: '+erros.join(' | '));
