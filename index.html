@@ -1986,7 +1986,8 @@ async function enviarRelatorio(){
 
     // Enviar via Edge Function (evita CORS)
     var subject='Relatório de Estoque — '+escNome+' — '+new Date().toLocaleDateString('pt-BR');
-    var toEmails=adminEmails.map(function(a){return a.email;});
+    // No plano gratuito do Resend, só envia para o próprio email cadastrado
+    var toEmails=[currentUser.email];
     var resp=await fetch(SUPABASE_URL+'/functions/v1/super-worker',{
       method:'POST',
       headers:{
