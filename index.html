@@ -387,6 +387,7 @@ tr:hover td{background:#f8fbf9}
       <div class="nav-item" data-page="movements"><span style="width:18px;text-align:center">🔄</span> Entradas e Saídas</div>
       <div class="nav-section" id="nav-section-admin" style="display:none">Administração</div>
       <div class="nav-item" data-page="config" id="nav-config" style="display:none"><span style="width:18px;text-align:center">⚙️</span> Configurações</div>
+      <div class="nav-item" data-page="relatorios" id="nav-relatorios" style="display:none"><span style="width:18px;text-align:center">📧</span> Relatórios</div>
       <div class="nav-item" data-page="users" id="nav-users" style="display:none"><span style="width:18px;text-align:center">👥</span> Usuários</div>
       <div class="nav-item" data-page="audit" id="nav-audit" style="display:none"><span style="width:18px;text-align:center">📋</span> Auditoria</div>
     </div>
@@ -596,6 +597,14 @@ tr:hover td{background:#f8fbf9}
       <div id="msg-config" class="msg" style="margin-top:16px"></div>
     </div>
 
+    <!-- RELATÓRIOS -->
+    <div class="page-section" id="page-relatorios">
+      <div class="topbar">
+        <div class="page-title">Configuração de Relatórios<small>Destinatários e envio automático por escritório</small></div>
+      </div>
+      <div id="relatorios-content"></div>
+    </div>
+
     <!-- USUÁRIOS -->
     <div class="page-section" id="page-users">
       <div class="topbar"><div class="page-title">Gerenciar Usuários</div></div>
@@ -776,7 +785,7 @@ function switchTab(tab){
   br.style.color=tab==='register'?'#fff':'#94a3b8';
   br.style.fontWeight=tab==='register'?'600':'500';
 }
-function navigateTo(page){document.querySelectorAll('.page-section').forEach(function(s){s.classList.remove('active');});document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});var sec=document.getElementById('page-'+page);if(sec)sec.classList.add('active');var nav=document.querySelector('[data-page="'+page+'"]');if(nav)nav.classList.add('active');if(page==='dashboard')loadDashboard();else if(page==='products')loadProducts();else if(page==='movements')loadMovements();else if(page==='config')loadConfig();else if(page==='users')loadUsers();else if(page==='audit')loadAudit();}
+function navigateTo(page){document.querySelectorAll('.page-section').forEach(function(s){s.classList.remove('active');});document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});var sec=document.getElementById('page-'+page);if(sec)sec.classList.add('active');var nav=document.querySelector('[data-page="'+page+'"]');if(nav)nav.classList.add('active');if(page==='dashboard')loadDashboard();else if(page==='products')loadProducts();else if(page==='movements')loadMovements();else if(page==='config')loadConfig();else if(page==='users')loadUsers();else if(page==='audit')loadAudit();else if(page==='relatorios')loadRelatorios();}
 
 async function enterApp(user){
   currentUser=user;
@@ -792,7 +801,7 @@ async function enterApp(user){
   document.getElementById('user-role-label').textContent=currentProfile.role.charAt(0).toUpperCase()+currentProfile.role.slice(1);
   var mAvatar=document.getElementById('mobile-avatar');
   if(mAvatar)mAvatar.textContent=initials;
-  if(currentProfile.role==='admin'){document.getElementById('nav-section-admin').style.display='';document.getElementById('nav-config').style.display='';document.getElementById('nav-users').style.display='';document.getElementById('nav-audit').style.display='';document.getElementById('invite-section').style.display='block';var btnRel=document.getElementById('btn-gerar-relatorio');if(btnRel)btnRel.style.display='flex';var btnEmail=document.getElementById('btn-enviar-relatorio');if(btnEmail)btnEmail.style.display='flex';}
+  if(currentProfile.role==='admin'){document.getElementById('nav-section-admin').style.display='';document.getElementById('nav-config').style.display='';document.getElementById('nav-users').style.display='';document.getElementById('nav-audit').style.display='';document.getElementById('nav-relatorios').style.display='';document.getElementById('invite-section').style.display='block';var btnRel=document.getElementById('btn-gerar-relatorio');if(btnRel)btnRel.style.display='flex';var btnEmail=document.getElementById('btn-enviar-relatorio');if(btnEmail)btnEmail.style.display='flex';}
   if(can('product'))document.getElementById('btn-new-product').style.display='';
   if(can('movement')){document.getElementById('btn-new-entrada').style.display='';document.getElementById('btn-new-saida').style.display='';}
   var now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -1877,11 +1886,16 @@ async function enviarRelatorio(){
     if(currentEscritorio)qm=qm.eq('escritorio_id',currentEscritorio);
     var rm=await qm; var movs=rm.data||[];
 
-    // Buscar e-mails dos admins
-    var adminsRes=await sb.from('profiles').select('email,full_name').eq('role','admin');
-    var admins=adminsRes.data||[];
-    if(!admins.length){alert('Nenhum administrador encontrado para enviar o e-mail.');return;}
-    var adminEmails=admins.map(function(a){return {email:a.email,name:a.full_name||a.email};});
+    // Buscar destinatários da configuração do escritório atual
+    var configRes=await sb.from('report_config').select('destinatarios').eq('escritorio_id',currentEscritorio||'00000000-0000-0000-0000-000000000000').maybeSingle();
+    var destinatarios=configRes.data&&configRes.data.destinatarios?configRes.data.destinatarios:[];
+    // Fallback: se não houver config, envia para admins
+    if(!destinatarios.length){
+      var adminsRes=await sb.from('profiles').select('email,full_name').eq('role','admin');
+      destinatarios=(adminsRes.data||[]).map(function(a){return {email:a.email,full_name:a.full_name};});
+    }
+    if(!destinatarios.length){alert('Nenhum destinatário configurado. Configure em Relatórios.');return;}
+    var adminEmails=destinatarios.map(function(a){return {email:a.email,name:a.full_name||a.email};});
 
     // KPIs
     var total=prods.length;
@@ -2013,6 +2027,179 @@ async function enviarRelatorio(){
   }finally{
     btn.textContent='📧 Enviar por e-mail';btn.disabled=false;
   }
+}
+
+
+// ── RELATÓRIOS — CONFIGURAÇÃO ──
+var DIAS_SEMANA=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+var FREQUENCIAS={diario:'Diário',semanal:'Semanal',quinzenal:'Quinzenal',mensal:'Mensal',personalizado:'Personalizado'};
+
+function calcularProximoEnvio(freq,diaSemana,hora,minuto){
+  var now=new Date();
+  var next=new Date(now);
+  next.setSeconds(0);next.setMilliseconds(0);
+  next.setHours(hora);next.setMinutes(minuto);
+  if(freq==='diario'){
+    if(next<=now)next.setDate(next.getDate()+1);
+  } else if(freq==='semanal'||freq==='personalizado'){
+    var diff=(diaSemana-now.getDay()+7)%7;
+    if(diff===0&&next<=now)diff=7;
+    next.setDate(next.getDate()+diff);
+  } else if(freq==='quinzenal'){
+    var diff2=(diaSemana-now.getDay()+7)%7;
+    if(diff2===0&&next<=now)diff2=14;
+    next.setDate(next.getDate()+diff2);
+  } else if(freq==='mensal'){
+    next.setDate(1);
+    if(next<=now){next.setMonth(next.getMonth()+1);}
+  }
+  return next.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+async function loadRelatorios(){
+  var div=document.getElementById('relatorios-content');
+  div.innerHTML='<div class="loading"><div class="spinner"></div> Carregando...</div>';
+  try{
+    // Buscar escritórios e configs
+    var escRes=await sb.from('escritorios').select('*').order('name');
+    var escs=escRes.data||[];
+    var cfgRes=await sb.from('report_config').select('*');
+    var cfgs=cfgRes.data||[];
+    // Buscar usuários cadastrados para lista de destinatários
+    var usersRes=await sb.from('profiles').select('id,email,full_name,role').order('full_name');
+    var users=usersRes.data||[];
+
+    var html='';
+    escs.forEach(function(esc){
+      var cfg=cfgs.find(function(c){return c.escritorio_id===esc.id;})||{
+        escritorio_id:esc.id,ativo:false,frequencia:'semanal',dia_semana:1,hora:8,minuto:0,destinatarios:[]
+      };
+      var dests=cfg.destinatarios||[];
+      var destIds=dests.map(function(d){return d.id;});
+
+      // Checkboxes de usuários
+      var userChecks=users.map(function(u){
+        var checked=destIds.includes(u.id)?'checked':'';
+        return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #e6ebe7;border-radius:8px;cursor:pointer;font-size:13px">'
+          +'<input type="checkbox" value="'+u.id+'" data-email="'+u.email+'" data-name="'+(u.full_name||u.email)+'" '+checked
+          +' style="width:15px;height:15px;accent-color:#2f9e5e;cursor:pointer;flex-shrink:0"> '
+          +'<span>'+( u.full_name||u.email)+'</span>'
+          +'<span style="font-size:11px;color:#69776e;margin-left:auto">'+u.email+'</span>'
+          +'<span class="badge badge-'+u.role+'" style="margin-left:4px">'+u.role+'</span>'
+          +'</label>';
+      }).join('');
+
+      var proximoStr=cfg.ativo?calcularProximoEnvio(cfg.frequencia,cfg.dia_semana,cfg.hora,cfg.minuto):'—';
+      var ultimoStr=cfg.ultimo_envio?new Date(cfg.ultimo_envio).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Nunca';
+
+      html+='<div class="card" style="margin-bottom:20px" data-esc-id="'+esc.id+'">'
+        +'<div class="card-header">'
+          +'<div>'
+            +'<div class="card-title">🏢 '+esc.name+'</div>'
+            +'<div style="font-size:12px;color:var(--text-muted);margin-top:2px">Último envio: <strong>'+ultimoStr+'</strong> · Próximo: <strong>'+proximoStr+'</strong></div>'
+          +'</div>'
+          +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text)">'
+            +'<input type="checkbox" class="cfg-ativo" '+(cfg.ativo?'checked':'')+' style="width:16px;height:16px;accent-color:var(--brand-600);cursor:pointer"> '
+            +'Envio automático ativo'
+          +'</label>'
+        +'</div>'
+        +'<div style="padding:20px 22px;display:grid;grid-template-columns:1fr 1fr;gap:24px">'
+
+          // Coluna 1: frequência
+          +'<div>'
+            +'<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:12px">Frequência de envio</div>'
+            +'<div class="form-group"><label class="form-label">Frequência</label>'
+              +'<select class="form-input cfg-freq">'
+                +Object.entries(FREQUENCIAS).map(function(e){return '<option value="'+e[0]+'"'+(cfg.frequencia===e[0]?' selected':'')+'>'+e[1]+'</option>';}).join('')
+              +'</select>'
+            +'</div>'
+            +'<div class="form-group cfg-dia-wrap" style="'+(cfg.frequencia==='diario'?'display:none':'')+'"><label class="form-label">Dia da semana</label>'
+              +'<select class="form-input cfg-dia">'
+                +DIAS_SEMANA.map(function(d,i){return '<option value="'+i+'"'+(cfg.dia_semana===i?' selected':'')+'>'+d+'</option>';}).join('')
+              +'</select>'
+            +'</div>'
+            +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+              +'<div class="form-group"><label class="form-label">Hora</label>'
+                +'<select class="form-input cfg-hora">'
+                  +Array.from({length:24},function(_,i){return '<option value="'+i+'"'+(cfg.hora===i?' selected':'')+'>'+String(i).padStart(2,'0')+'h</option>';}).join('')
+                +'</select>'
+              +'</div>'
+              +'<div class="form-group"><label class="form-label">Minuto</label>'
+                +'<select class="form-input cfg-min">'
+                  +['00','15','30','45'].map(function(m){return '<option value="'+parseInt(m)+'"'+(cfg.minuto===parseInt(m)?' selected':'')+'>:'+m+'</option>';}).join('')
+                +'</select>'
+              +'</div>'
+            +'</div>'
+          +'</div>'
+
+          // Coluna 2: destinatários
+          +'<div>'
+            +'<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);margin-bottom:12px">Destinatários</div>'
+            +'<div class="cfg-users" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">'+userChecks+'</div>'
+          +'</div>'
+
+        +'</div>'
+        +'<div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">'
+          +'<button class="btn-add cfg-enviar-agora" style="background:linear-gradient(135deg,#2563a8,#1d4ed8);padding:9px 18px">📧 Enviar agora</button>'
+          +'<button class="btn-add cfg-salvar">💾 Salvar configurações</button>'
+        +'</div>'
+      +'</div>';
+    });
+
+    div.innerHTML=html||'<div style="padding:40px;text-align:center;color:var(--text-muted)">Nenhum escritório cadastrado.</div>';
+
+    // Bind eventos de cada card
+    div.querySelectorAll('.card[data-esc-id]').forEach(function(card){
+      var escId=card.dataset.escId;
+      var freqSel=card.querySelector('.cfg-freq');
+      var diaWrap=card.querySelector('.cfg-dia-wrap');
+      freqSel.addEventListener('change',function(){
+        diaWrap.style.display=freqSel.value==='diario'?'none':'';
+      });
+      card.querySelector('.cfg-salvar').addEventListener('click',function(){salvarConfigRelatorio(card,escId);});
+      card.querySelector('.cfg-enviar-agora').addEventListener('click',function(){enviarRelatorioEscritorio(escId);});
+    });
+
+  }catch(err){div.innerHTML='<div style="padding:24px;color:var(--danger)">Erro: '+err.message+'</div>';}
+}
+
+async function salvarConfigRelatorio(card,escId){
+  var ativo=card.querySelector('.cfg-ativo').checked;
+  var freq=card.querySelector('.cfg-freq').value;
+  var dia=parseInt(card.querySelector('.cfg-dia').value)||1;
+  var hora=parseInt(card.querySelector('.cfg-hora').value)||8;
+  var minuto=parseInt(card.querySelector('.cfg-min').value)||0;
+  // Coletar destinatários selecionados
+  var dests=[];
+  card.querySelectorAll('.cfg-users input:checked').forEach(function(chk){
+    dests.push({id:chk.value,email:chk.dataset.email,full_name:chk.dataset.name});
+  });
+  // Calcular próximo envio
+  var now=new Date();
+  var next=new Date(now);
+  next.setSeconds(0);next.setMilliseconds(0);
+  next.setHours(hora);next.setMinutes(minuto);
+  if(freq==='diario'){if(next<=now)next.setDate(next.getDate()+1);}
+  else if(freq==='semanal'||freq==='personalizado'){var diff=(dia-now.getDay()+7)%7;if(diff===0&&next<=now)diff=7;next.setDate(next.getDate()+diff);}
+  else if(freq==='quinzenal'){var diff2=(dia-now.getDay()+7)%7;if(diff2===0&&next<=now)diff2=14;next.setDate(next.getDate()+diff2);}
+  else if(freq==='mensal'){next.setDate(1);if(next<=now){next.setMonth(next.getMonth()+1);}}
+
+  var res=await sb.from('report_config').upsert({
+    escritorio_id:escId,ativo:ativo,frequencia:freq,dia_semana:dia,hora:hora,minuto:minuto,
+    destinatarios:dests,proximo_envio:next.toISOString(),updated_at:new Date().toISOString()
+  },{onConflict:'escritorio_id'});
+
+  if(res.error){alert('Erro ao salvar: '+res.error.message);return;}
+  alert('✅ Configurações salvas! Próximo envio: '+next.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}));
+  loadRelatorios();
+}
+
+async function enviarRelatorioEscritorio(escId){
+  // Salvar escritório atual temporariamente e enviar
+  var escAnterior=currentEscritorio;
+  currentEscritorio=escId;
+  await enviarRelatorio();
+  currentEscritorio=escAnterior;
 }
 
 // ── EVENTOS ──
