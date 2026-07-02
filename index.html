@@ -1937,66 +1937,182 @@ async function enviarRelatorio(){
     }).join('');
 
     var periodoStr=from7.toLocaleDateString('pt-BR')+' a '+now.toLocaleDateString('pt-BR');
+    var dataFormatada=now.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    var remetente=currentProfile.full_name||currentUser.email;
 
-    // HTML do email
-    var emailHtml='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f3f5f2;font-family:Arial,sans-serif">'
-      +'<div style="max-width:600px;margin:0 auto;padding:24px">'
+    // ── Função helper para célula KPI ──
+    function kpiCell(num,label,cor,bg,border){
+      return '<td width="16%" style="padding:4px">'
+        +'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:'+bg+';border:1px solid '+border+';border-radius:10px">'
+          +'<tr><td style="padding:14px 8px;text-align:center">'
+            +'<div style="font-size:28px;font-weight:800;color:'+cor+';line-height:1;font-family:Arial,sans-serif">'+num+'</div>'
+            +'<div style="font-size:9px;color:#69776e;margin-top:5px;text-transform:uppercase;letter-spacing:.8px;font-family:Arial,sans-serif">'+label+'</div>'
+          +'</td></tr>'
+        +'</table>'
+      +'</td>';
+    }
 
-      // Cabeçalho
-      +'<div style="background:#10261c;border-radius:12px;padding:20px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">'
-        +'<div><h1 style="color:#fff;font-size:20px;font-weight:800;margin:0">📦 StockOIM</h1>'
-        +'<p style="color:#7ba88f;font-size:11px;margin:4px 0 0">Relatório de Estoque</p></div>'
-        +'<div style="text-align:right;font-size:11px;color:#7ba88f">'
-          +'<div>'+escNome+'</div>'
-          +'<div>'+dataHora+'</div>'
-          +'<div>Por: '+(currentProfile.full_name||currentUser.email)+'</div>'
-        +'</div>'
-      +'</div>'
+    // ── Cabeçalho da seção ──
+    function sectionHeader(emoji,title,subtitle){
+      return '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:0">'
+        +'<tr><td style="padding:14px 20px;background:#f7faf8;border-bottom:2px solid #e6ebe7;border-radius:10px 10px 0 0">'
+          +'<span style="font-size:14px;font-weight:700;color:#10261c;font-family:Arial,sans-serif">'+emoji+' '+title+'</span>'
+          +(subtitle?'<span style="font-size:11px;color:#69776e;margin-left:10px;font-family:Arial,sans-serif">'+subtitle+'</span>':'')
+        +'</td></tr>'
+      +'</table>';
+    }
 
-      // KPIs
-      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">'
-        +'<div style="background:#fff;border-radius:10px;padding:14px;text-align:center;border:1px solid #e6ebe7"><div style="font-size:26px;font-weight:800;color:#10261c">'+total+'</div><div style="font-size:10px;color:#69776e;margin-top:3px;text-transform:uppercase;letter-spacing:.5px">Total</div></div>'
-        +'<div style="background:#f0fdf4;border-radius:10px;padding:14px;text-align:center;border:1px solid #bbf7d0"><div style="font-size:26px;font-weight:800;color:#16a34a">'+bomN+'</div><div style="font-size:10px;color:#69776e;margin-top:3px;text-transform:uppercase;letter-spacing:.5px">Bom</div></div>'
-        +'<div style="background:#fffbeb;border-radius:10px;padding:14px;text-align:center;border:1px solid #fde68a"><div style="font-size:26px;font-weight:800;color:#d97706">'+atencaoN+'</div><div style="font-size:10px;color:#69776e;margin-top:3px;text-transform:uppercase;letter-spacing:.5px">Atenção</div></div>'
-        +'<div style="background:#fff1f2;border-radius:10px;padding:14px;text-align:center;border:1px solid #fecdd3"><div style="font-size:26px;font-weight:800;color:#dc2626">'+criticoN+'</div><div style="font-size:10px;color:#69776e;margin-top:3px;text-transform:uppercase;letter-spacing:.5px">Crítico</div></div>'
-        +'<div style="background:#eff6ff;border-radius:10px;padding:14px;text-align:center;border:1px solid #bfdbfe"><div style="font-size:26px;font-weight:800;color:#2563a8">'+totalEntradas+'</div><div style="font-size:10px;color:#69776e;margin-top:3px;text-transform:uppercase;letter-spacing:.5px">Entradas (7d)</div></div>'
-        +'<div style="background:#fdf4ff;border-radius:10px;padding:14px;text-align:center;border:1px solid #e9d5ff"><div style="font-size:26px;font-weight:800;color:#7c3aed">'+totalSaidas+'</div><div style="font-size:10px;color:#69776e;margin-top:3px;text-transform:uppercase;letter-spacing:.5px">Saídas (7d)</div></div>'
-      +'</div>'
+    // ── Cabeçalho TH de tabela ──
+    function th(txt,align){
+      return '<th style="padding:9px 12px;text-align:'+(align||'left')+';font-size:10px;color:#69776e;text-transform:uppercase;letter-spacing:.6px;font-weight:700;background:#f7faf8;border-bottom:2px solid #e6ebe7;font-family:Arial,sans-serif;white-space:nowrap">'+txt+'</th>';
+    }
 
-      // Alertas
-      +(alertas.length
-        ?'<div style="background:#fff;border-radius:10px;border:1px solid #e6ebe7;margin-bottom:16px;overflow:hidden">'
-          +'<div style="background:#fff1f2;border-left:4px solid #dc2626;padding:12px 16px">'
-            +'<strong style="color:#dc2626;font-size:13px">⚠️ '+alertas.length+' produto(s) precisam de atenção imediata</strong>'
-          +'</div>'
-          +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
-            +'<thead><tr style="background:#f7faf8"><th style="padding:8px 12px;text-align:left;font-size:10px;color:#69776e;text-transform:uppercase;letter-spacing:.5px;font-weight:700;border-bottom:1px solid #e6ebe7">Produto</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:#69776e;text-transform:uppercase;letter-spacing:.5px;font-weight:700;border-bottom:1px solid #e6ebe7">Categoria</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:#69776e;text-transform:uppercase;letter-spacing:.5px;font-weight:700;border-bottom:1px solid #e6ebe7">SKU</th><th style="padding:8px 12px;text-align:center;font-size:10px;color:#69776e;text-transform:uppercase;letter-spacing:.5px;font-weight:700;border-bottom:1px solid #e6ebe7">Qtd.</th><th style="padding:8px 12px;text-align:center;font-size:10px;color:#69776e;text-transform:uppercase;letter-spacing:.5px;font-weight:700;border-bottom:1px solid #e6ebe7">Status</th></tr></thead>'
-            +'<tbody>'+alertRows+'</tbody>'
+    // ── Alertas ──
+    var alertRowsHtml='';
+    if(alertas.length){
+      alertRowsHtml=alertas.map(function(p,i){
+        var s=getStatus(p.qty,p.id);
+        var cor=s.label==='Crítico'?'#dc2626':'#d97706';
+        var bg=i%2===0?'#ffffff':(s.label==='Crítico'?'#fff8f8':'#fffef5');
+        var cfg=productConfigs[p.id]||{atencao:10,critico:5};
+        return '<tr style="background:'+bg+'">'
+          +'<td style="padding:10px 12px;border-bottom:1px solid #f1f4f1;font-size:12px;font-family:Arial,sans-serif"><strong style="color:#142319">'+p.name+'</strong></td>'
+          +'<td style="padding:10px 12px;border-bottom:1px solid #f1f4f1;font-size:12px;color:#69776e;font-family:Arial,sans-serif">'+p.category+'</td>'
+          +'<td style="padding:10px 12px;border-bottom:1px solid #f1f4f1;font-size:11px;font-family:monospace,Arial;background:#f7faf8;color:#475569">'+p.sku+'</td>'
+          +'<td style="padding:10px 12px;border-bottom:1px solid #f1f4f1;text-align:center;font-size:20px;font-weight:800;color:'+cor+';font-family:Arial,sans-serif">'+p.qty+'</td>'
+          +'<td style="padding:10px 12px;border-bottom:1px solid #f1f4f1;text-align:center;font-size:11px;color:#69776e;font-family:Arial,sans-serif">A≤'+cfg.atencao+' C≤'+cfg.critico+'</td>'
+          +'<td style="padding:10px 12px;border-bottom:1px solid #f1f4f1;text-align:center">'
+            +'<span style="background:'+(s.label==='Crítico'?'#fff1f2':'#fffbeb')+';color:'+cor+';font-weight:700;padding:4px 12px;border-radius:20px;font-size:11px;font-family:Arial,sans-serif;border:1px solid '+(s.label==='Crítico'?'#fecdd3':'#fde68a')+'">'+s.label+'</span>'
+          +'</td>'
+        +'</tr>';
+      }).join('');
+    }
+
+    // ── Movimentações ──
+    var movRowsHtml=movs.slice(0,15).map(function(m,i){
+      var d=new Date(m.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+      var isEntrada=m.type==='entrada';
+      var cor=isEntrada?'#16a34a':'#dc2626';
+      var bg=i%2===0?'#ffffff':'#fafcfa';
+      return '<tr style="background:'+bg+'">'
+        +'<td style="padding:9px 12px;border-bottom:1px solid #f1f4f1;font-size:11px;color:#69776e;white-space:nowrap;font-family:Arial,sans-serif">'+d+'</td>'
+        +'<td style="padding:9px 12px;border-bottom:1px solid #f1f4f1;font-size:12px;font-family:Arial,sans-serif"><strong style="color:#142319">'+m.product_name+'</strong></td>'
+        +'<td style="padding:9px 12px;border-bottom:1px solid #f1f4f1;text-align:center">'
+          +'<span style="background:'+(isEntrada?'#f0fdf4':'#fff1f2')+';color:'+cor+';font-weight:700;padding:3px 10px;border-radius:20px;font-size:11px;font-family:Arial,sans-serif;border:1px solid '+(isEntrada?'#bbf7d0':'#fecdd3')+'">'+(isEntrada?'↑ Entrada':'↓ Saída')+'</span>'
+        +'</td>'
+        +'<td style="padding:9px 12px;border-bottom:1px solid #f1f4f1;text-align:center;font-size:14px;font-weight:800;color:'+cor+';font-family:Arial,sans-serif">'+m.qty+'</td>'
+        +'<td style="padding:9px 12px;border-bottom:1px solid #f1f4f1;font-size:11px;color:#69776e;font-family:Arial,sans-serif">'+(m.user_name||'—')+'</td>'
+        +'<td style="padding:9px 12px;border-bottom:1px solid #f1f4f1;font-size:11px;color:#69776e;font-family:Arial,sans-serif;font-style:'+(m.note?'normal':'italic')+'">'+(m.note||'—')+'</td>'
+      +'</tr>';
+    }).join('');
+
+    // ── HTML FINAL DO EMAIL ──
+    var emailHtml='<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">'
+    +'<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Relatório StockOIM</title>'
+    +'<!--[if mso]><style>td{font-family:Arial,sans-serif!important}</style><![endif]-->'
+    +'</head>'
+    +'<body style="margin:0;padding:0;background-color:#f0f4f1;font-family:Arial,Helvetica,sans-serif">'
+
+    // Wrapper externo
+    +'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0f4f1;padding:24px 16px">'
+    +'<tr><td align="center">'
+    +'<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%">'
+
+    // ── HEADER ──
+    +'<tr><td>'
+    +'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#10261c;border-radius:14px 14px 0 0;padding:0;margin-bottom:0">'
+      +'<tr>'
+        +'<td style="padding:22px 28px 18px">'
+          +'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            +'<tr>'
+              +'<td>'
+                +'<div style="font-size:22px;font-weight:800;color:#ffffff;font-family:Arial,sans-serif;letter-spacing:-.3px">&#128230; StockOIM</div>'
+                +'<div style="font-size:11px;color:#7ba88f;margin-top:4px;font-family:Arial,sans-serif">Sistema de Gestão de Estoque · IOM Brasil</div>'
+              +'</td>'
+              +'<td align="right" style="vertical-align:top">'
+                +'<div style="font-size:10px;color:#7ba88f;text-align:right;line-height:1.8;font-family:Arial,sans-serif">'
+                  +'<span style="color:#bff0d3;font-weight:700">'+escNome+'</span><br>'
+                  +dataFormatada+'<br>'
+                  +'Gerado por '+remetente
+                +'</div>'
+              +'</td>'
+            +'</tr>'
           +'</table>'
-        +'</div>'
-        :'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:16px;color:#16a34a;font-weight:600;font-size:13px">✅ Nenhum produto em estado crítico ou de atenção</div>'
-      )
+        +'</td>'
+      +'</tr>'
+      // Barra verde na base do header
+      +'<tr><td style="background:linear-gradient(90deg,#2f9e5e,#1f7a47);height:4px;border-radius:0"></td></tr>'
+    +'</table>'
+    +'</td></tr>'
 
-      // Movimentações
+    // ── CARD PRINCIPAL ──
+    +'<tr><td style="background:#ffffff;border-radius:0 0 14px 14px;padding:24px 28px;box-shadow:0 2px 8px rgba(16,38,28,.08)">'
+
+    // Subtítulo
+    +'<p style="font-size:13px;color:#69776e;margin:0 0 20px;font-family:Arial,sans-serif">Este relatório apresenta o panorama atual do estoque da unidade <strong style="color:#10261c">'+escNome+'</strong> com dados atualizados em tempo real.</p>'
+
+    // ── KPIs em tabela (6 colunas) ──
+    +'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px">'
+      +'<tr>'
+        +kpiCell(total,'Total','#10261c','#f7faf8','#e6ebe7')
+        +kpiCell(bomN,'Bom','#16a34a','#f0fdf4','#bbf7d0')
+        +kpiCell(atencaoN,'Atenção','#d97706','#fffbeb','#fde68a')
+        +kpiCell(criticoN,'Crítico','#dc2626','#fff1f2','#fecdd3')
+        +kpiCell(totalEntradas,'Entradas','#2563a8','#eff6ff','#bfdbfe')
+        +kpiCell(totalSaidas,'Saídas','#7c3aed','#fdf4ff','#e9d5ff')
+      +'</tr>'
+    +'</table>'
+
+    // ── BANNER ALERTA ou OK ──
+    +(alertas.length
+      ?'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;border:1px solid #fecdd3;border-radius:10px;overflow:hidden">'
+        +'<tr><td style="background:#fff1f2;padding:12px 16px;border-left:4px solid #dc2626">'
+          +'<span style="font-size:13px;font-weight:700;color:#dc2626;font-family:Arial,sans-serif">&#9888;&#65039; '+alertas.length+' produto(s) exigem ação imediata</span>'
+          +'<span style="font-size:11px;color:#b91c1c;margin-left:8px;font-family:Arial,sans-serif">Verifique e reponha o estoque o quanto antes</span>'
+        +'</td></tr>'
+        // Tabela de alertas
+        +sectionHeader('','Produtos em Alerta','')
+        +'<tr><td>'
+        +'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+          +'<thead><tr>'+th('Produto')+th('Categoria')+th('SKU')+th('Qtd.','center')+th('Limites','center')+th('Status','center')+'</tr></thead>'
+          +'<tbody>'+alertRowsHtml+'</tbody>'
+        +'</table>'
+        +'</td></tr>'
+      +'</table>'
+      :'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px">'
+        +'<tr><td style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px">'
+          +'<span style="font-size:13px;font-weight:700;color:#16a34a;font-family:Arial,sans-serif">&#10003; Estoque sob controle</span>'
+          +'<span style="font-size:12px;color:#15803d;margin-left:8px;font-family:Arial,sans-serif">Nenhum produto em estado crítico ou de atenção.</span>'
+        +'</td></tr>'
+      +'</table>'
+    )
+
+    // ── MOVIMENTAÇÕES ──
+    +'<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;border:1px solid #e6ebe7;border-radius:10px;overflow:hidden">'
+      +sectionHeader('&#128260;','Movimentações dos Últimos 7 Dias',periodoStr+' &nbsp;·&nbsp; '+movs.length+' registro(s)')
       +(movs.length
-        ?'<div style="background:#fff;border-radius:10px;border:1px solid #e6ebe7;margin-bottom:16px;overflow:hidden">'
-          +'<div style="padding:12px 16px;border-bottom:1px solid #e6ebe7;background:#f7faf8">'
-            +'<strong style="font-size:13px;color:#10261c">🔄 Movimentações — '+periodoStr+'</strong>'
-            +'<span style="font-size:11px;color:#69776e;margin-left:8px">'+movs.length+' registro(s)</span>'
-          +'</div>'
-          +'<table style="width:100%;border-collapse:collapse;font-size:11px">'
-            +'<thead><tr style="background:#f7faf8"><th style="padding:7px 12px;text-align:left;color:#69776e;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e6ebe7">Data</th><th style="padding:7px 12px;text-align:left;color:#69776e;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e6ebe7">Produto</th><th style="padding:7px 12px;text-align:center;color:#69776e;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e6ebe7">Tipo</th><th style="padding:7px 12px;text-align:center;color:#69776e;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e6ebe7">Qtd.</th><th style="padding:7px 12px;text-align:left;color:#69776e;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e6ebe7">Usuário</th><th style="padding:7px 12px;text-align:left;color:#69776e;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e6ebe7">Obs.</th></tr></thead>'
-            +'<tbody>'+movRows+'</tbody>'
+        ?'<tr><td>'
+          +'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            +'<thead><tr>'+th('Data/Hora')+th('Produto')+th('Tipo','center')+th('Qtd.','center')+th('Usuário')+th('Observação')+'</tr></thead>'
+            +'<tbody>'+movRowsHtml+'</tbody>'
           +'</table>'
-        +'</div>'
-        :'<div style="background:#f7faf8;border-radius:10px;padding:12px 16px;margin-bottom:16px;color:#69776e;font-size:13px;text-align:center">Nenhuma movimentação nos últimos 7 dias</div>'
+          +(movs.length>15?'<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:10px 12px;text-align:center;font-size:11px;color:#69776e;font-family:Arial,sans-serif;font-style:italic">Mostrando os 15 registros mais recentes de '+movs.length+' total</td></tr></table>':'')
+        +'</td></tr>'
+        :'<tr><td style="padding:20px;text-align:center;font-size:12px;color:#69776e;font-family:Arial,sans-serif;font-style:italic">Nenhuma movimentação registrada neste período.</td></tr>'
       )
+    +'</table>'
 
-      // Rodapé
-      +'<div style="text-align:center;padding-top:16px;border-top:1px solid #e6ebe7;font-size:10px;color:#aab5ad">'
-        +'StockOIM · Relatório gerado automaticamente · '+dataHora
-      +'</div>'
-      +'</div></body></html>';
+    +'</td></tr>' // fecha card principal
+
+    // ── RODAPÉ ──
+    +'<tr><td style="padding:20px 28px;text-align:center">'
+      +'<p style="font-size:11px;color:#9aa69e;margin:0;font-family:Arial,sans-serif">Este e-mail foi gerado automaticamente pelo <strong>StockOIM</strong> &nbsp;·&nbsp; Sistema de Gestão de Estoque</p>'
+      +'<p style="font-size:10px;color:#b5bfb8;margin:6px 0 0;font-family:Arial,sans-serif">IOM Brasil &nbsp;·&nbsp; Feito no Brasil &#127463;&#127479;</p>'
+    +'</td></tr>'
+
+    +'</table>' // fecha inner 600px
+    +'</td></tr></table>' // fecha outer wrapper
+    +'</body></html>';
 
     // Enviar via Edge Function (evita CORS)
     var subject='Relatório de Estoque — '+escNome+' — '+new Date().toLocaleDateString('pt-BR');
