@@ -1,6 +1,6 @@
-name: Keep Supabase Active + Envio Automatico de Relatorios
+name: Keep Supabase Active + Envio Automatico
 
-on:
+"on":
   schedule:
     - cron: '0 * * * *'
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      - name: Ping Supabase (keep alive)
+      - name: Ping Supabase
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
@@ -18,7 +18,7 @@ jobs:
             "${{ secrets.SUPABASE_URL }}/rest/v1/escritorios?select=id&limit=1")
           echo "Ping status: $STATUS - $(date -u)"
 
-      - name: Verificar e disparar relatorios automaticos
+      - name: Disparar relatorios automaticos
         run: |
           RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -X POST \
