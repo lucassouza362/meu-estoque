@@ -1,9 +1,9 @@
-name: Keep Supabase Active + Envio Automático de Relatórios
+name: Keep Supabase Active + Envio Automatico de Relatorios
 
 on:
   schedule:
-    - cron: '0 * * * *'   # Roda todo hora em ponto (UTC)
-  workflow_dispatch:        # Permite rodar manualmente
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   ping-and-send:
@@ -16,11 +16,10 @@ jobs:
             -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
             "${{ secrets.SUPABASE_URL }}/rest/v1/escritorios?select=id&limit=1")
-          echo "Ping status: $STATUS — $(date -u)"
+          echo "Ping status: $STATUS - $(date -u)"
 
-      - name: Verificar e disparar relatórios automáticos
+      - name: Verificar e disparar relatorios automaticos
         run: |
-          echo "Verificando relatórios automáticos — $(date -u)"
           RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -X POST \
             -H "Content-Type: application/json" \
@@ -28,15 +27,7 @@ jobs:
             -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
             -d '{"auto": true}' \
             "${{ secrets.SUPABASE_URL }}/functions/v1/super-worker")
-
           HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
           BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS:")
-
           echo "Status: $HTTP_STATUS"
           echo "Resposta: $BODY"
-
-          if [ "$HTTP_STATUS" != "200" ]; then
-            echo "⚠️ Falha no disparo automático: $HTTP_STATUS"
-          else
-            echo "✅ Verificação concluída"
-          fi
