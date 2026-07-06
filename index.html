@@ -1011,6 +1011,13 @@ var chartsFiltersInitialized=false;
 
 function destroyChart(id){
   if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}
+  // Garantir que o canvas não tem referência residual do Chart.js
+  var canvasMap={byProduct:'chart-by-product',byCategory:'chart-by-category',evolution:'chart-evolution',movements:'chart-movements'};
+  var canvasId=canvasMap[id];
+  if(canvasId&&typeof Chart!=='undefined'){
+    var existing=Chart.getChart(canvasId);
+    if(existing)existing.destroy();
+  }
 }
 
 function chartColors(){
