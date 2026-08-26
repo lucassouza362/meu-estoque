@@ -751,22 +751,22 @@ function initApp(){
 var escritorios=[], currentEscritorio=null, userEscritorios=[];
 const SUPABASE_URL='https://fsdfdrmrmptccudeesbk.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzZGZkcm1ybXB0Y2N1ZGVlc2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODQxMTcsImV4cCI6MjA5MDQ2MDExN30.umM8-OG15FUSZ4YCq8MKLWyiasQunq2LX5tceE1hszI';
-const RESEND_KEY='re_gfvNJ82a_NkSqnaDr6PM9et1T7Bb59oRY';
+// Envio de email via Edge Function (Brevo)
 let sb=null,currentUser=null,currentProfile=null,editingProductId=null,movementType='entrada',editingUserId=null;
 let allProducts=[]; // cache
-let productConfigs={}; // {product_id: {atencao, critico}}
+let productConfigs={}; // {product_id: {atencao, critico}} — carregado do banco
 let dashPeriod={from:null,to:null};
 
 // ── STATUS CONFIG (individual por produto) ──
-function loadConfigs(){var s=localStorage.getItem('stockoim_configs');if(s)try{productConfigs=JSON.parse(s);}catch(e){}}
-function saveConfigs(){localStorage.setItem('stockoim_configs',JSON.stringify(productConfigs));}
+function loadConfigs(){} // migrado para o banco
+function saveConfigs(){} // migrado para o banco
 function getStatus(qty,productId){
-  var cfg=productConfigs[productId]||{atencao:10,critico:5};
+  var cfg=productConfigs[productId]||{atencao:400,critico:150};
   if(qty<=cfg.critico)return{label:'Crítico',cls:'badge-critico'};
   if(qty<=cfg.atencao)return{label:'Atenção',cls:'badge-atencao'};
   return{label:'Bom',cls:'badge-bom'};
 }
-loadConfigs();
+// loadConfigs() removido — dados vêm do banco
 
 // Art bars
 (function(){var b=document.getElementById('art-bar');if(!b)return;[60,85,40,95,70,55,80,45,90,65,75,50,88,35,72].forEach(function(h,i){var d=document.createElement('div');d.style.cssText='flex:1;height:'+h+'%;background:'+(i%2===0?'#2f9e5e':'#e8a91e')+';opacity:'+(0.4+h/200)+';border-radius:4px 4px 0 0';b.appendChild(d);});})();
@@ -785,7 +785,20 @@ function switchTab(tab){
   br.style.color=tab==='register'?'#fff':'#94a3b8';
   br.style.fontWeight=tab==='register'?'600':'500';
 }
-function navigateTo(page){document.querySelectorAll('.page-section').forEach(function(s){s.classList.remove('active');});document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});var sec=document.getElementById('page-'+page);if(sec)sec.classList.add('active');var nav=document.querySelector('[data-page="'+page+'"]');if(nav)nav.classList.add('active');if(page==='dashboard')loadDashboard();else if(page==='products')loadProducts();else if(page==='movements')loadMovements();else if(page==='config')loadConfig();else if(page==='users')loadUsers();else if(page==='audit')loadAudit();else if(page==='relatorios')loadRelatorios();}
+function navigateTo(page){
+  // Destruir gráficos ao sair do dashboard
+  if(page!=='dashboard'&&typeof Chart!=='undefined'){
+    ['chart-by-product','chart-by-category','chart-evolution','chart-movements'].forEach(function(id){
+      var c=Chart.getChart(id);if(c)c.destroy();
+    });
+    chartInstances={};
+  }
+  document.querySelectorAll('.page-section').forEach(function(s){s.classList.remove('active');});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  var sec=document.getElementById('page-'+page);if(sec)sec.classList.add('active');
+  var nav=document.querySelector('[data-page="'+page+'"]');if(nav)nav.classList.add('active');
+  if(page==='dashboard')loadDashboard();else if(page==='products')loadProducts();else if(page==='movements')loadMovements();else if(page==='config')loadConfig();else if(page==='users')loadUsers();else if(page==='audit')loadAudit();else if(page==='relatorios')loadRelatorios();
+}
 
 async function enterApp(user){
   currentUser=user;
@@ -958,6 +971,10 @@ async function loadDashboard(){
   if(currentEscritorio)qProd=qProd.eq('escritorio_id',currentEscritorio);
   var pr=await qProd;
   allProducts=pr.data||[];
+  // Atualizar productConfigs com dados do banco
+  allProducts.forEach(function(p){
+    productConfigs[p.id]={atencao:p.status_atencao||400,critico:p.status_critico||150};
+  });
   document.getElementById('stat-total').textContent=allProducts.length;
   document.getElementById('stat-bom').textContent=allProducts.filter(function(p){return getStatus(p.qty,p.id).label==='Bom';}).length;
   document.getElementById('stat-atencao').textContent=allProducts.filter(function(p){return getStatus(p.qty,p.id).label==='Atenção';}).length;
@@ -1318,8 +1335,12 @@ async function loadMovements(){
 
 // ── CONFIGURAÇÕES INDIVIDUAIS ──
 async function loadConfig(){
-  var res=await sb.from('products').select('id,name,category,qty').order('name');
+  var res=await sb.from('products').select('id,name,category,qty,status_atencao,status_critico').order('name');
   allProducts=res.data||[];
+  // Popular productConfigs a partir dos dados do banco
+  allProducts.forEach(function(p){
+    productConfigs[p.id]={atencao:p.status_atencao||400,critico:p.status_critico||150};
+  });
   // Popular filtro de categoria
   var cats=[...new Set(allProducts.map(function(p){return p.category;}))].sort();
   var cfgCat=document.getElementById('filter-config-cat');
@@ -1334,7 +1355,7 @@ function renderConfigRows(){
   var div=document.getElementById('config-rows');
   if(!ps.length){div.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted)">Nenhum produto encontrado.</div>';return;}
   div.innerHTML=ps.map(function(p){
-    var cfg=productConfigs[p.id]||{atencao:10,critico:5};
+    var cfg=productConfigs[p.id]||{atencao:400,critico:150};
     var s=getStatus(p.qty,p.id);
     return '<div class="config-row" data-id="'+p.id+'">'
       +'<div><strong style="font-size:13px">'+p.name+'</strong><br><span style="font-size:11px;color:var(--muted)">'+p.category+' • Estoque atual: <strong style="color:'+( s.label==='Bom'?'#10b981':s.label==='Atenção'?'#f59e0b':'#ef4444')+'">'+p.qty+'</strong></span></div>'
@@ -1358,17 +1379,28 @@ function renderConfigRows(){
     });
   });
 }
-function saveConfig(){
-  // Lê todos os valores da tela
-  document.querySelectorAll('.config-row[data-id]').forEach(function(row){
+async function saveConfig(){
+  var rows=document.querySelectorAll('.config-row[data-id]');
+  var hasError=false;
+  var updates=[];
+  rows.forEach(function(row){
     var id=row.dataset.id;
     var a=parseInt(row.querySelector('[data-field="atencao"]').value)||0;
     var c=parseInt(row.querySelector('[data-field="critico"]').value)||0;
-    if(a<c){showMsg('msg-config','error','Para "'+id+'": Atenção deve ser maior que Crítico.');return;}
+    if(a<c){showMsg('msg-config','error','Atenção deve ser maior que Crítico.');hasError=true;return;}
     productConfigs[id]={atencao:a,critico:c};
+    updates.push({id:id,atencao:a,critico:c});
   });
-  saveConfigs();
-  showMsg('msg-config','success','Configurações salvas com sucesso!');
+  if(hasError)return;
+  // Salvar no banco
+  var erros=[];
+  for(var i=0;i<updates.length;i++){
+    var u=updates[i];
+    var res=await sb.from('products').update({status_atencao:u.atencao,status_critico:u.critico}).eq('id',u.id);
+    if(res.error)erros.push(res.error.message);
+  }
+  if(erros.length){showMsg('msg-config','error','Erro ao salvar: '+erros[0]);return;}
+  showMsg('msg-config','success','Configurações salvas no banco com sucesso!');
   loadDashboard();loadProducts();
 }
 
