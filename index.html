@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https://fsdfdrmrmptccudeesbk.supabase.co https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https:; connect-src 'self' https://fsdfdrmrmptccudeesbk.supabase.co https://api.brevo.com;">
 <title>StockOIM — Sistema de Estoque</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -381,14 +384,15 @@ tr:hover td{background:#f8fbf9}
     </div>
     <div class="sidebar-nav">
       <div class="nav-section">Principal</div>
-      <div class="nav-item active" data-page="dashboard"><span style="width:18px;text-align:center">📊</span> Dashboard</div>
-      <div class="nav-item" data-page="products"><span style="width:18px;text-align:center">📦</span> Produtos</div>
+      <div class="nav-item active" data-page="dashboard" data-modulo="estoque"><span style="width:18px;text-align:center">📊</span> Dashboard</div>
+      <div class="nav-item" data-page="products" data-modulo="estoque"><span style="width:18px;text-align:center">📦</span> Produtos</div>
       <div class="nav-section">Movimentações</div>
-      <div class="nav-item" data-page="movements"><span style="width:18px;text-align:center">🔄</span> Entradas e Saídas</div>
+      <div class="nav-item" data-page="movements" data-modulo="estoque"><span style="width:18px;text-align:center">🔄</span> Entradas e Saídas</div>
       <div class="nav-section" id="nav-section-admin" style="display:none">Administração</div>
-      <div class="nav-item" data-page="config" id="nav-config" style="display:none"><span style="width:18px;text-align:center">⚙️</span> Configurações</div>
-      <div class="nav-item" data-page="relatorios" id="nav-relatorios" style="display:none"><span style="width:18px;text-align:center">📧</span> Relatórios</div>
+      <div class="nav-item" data-page="config" id="nav-config" data-modulo="estoque" style="display:none"><span style="width:18px;text-align:center">⚙️</span> Configurações</div>
+      <div class="nav-item" data-page="relatorios" id="nav-relatorios" data-modulo="estoque" style="display:none"><span style="width:18px;text-align:center">📧</span> Relatórios</div>
       <div class="nav-item" data-page="users" id="nav-users" style="display:none"><span style="width:18px;text-align:center">👥</span> Usuários</div>
+      <div class="nav-item" data-page="escritorios" id="nav-escritorios" style="display:none"><span style="width:18px;text-align:center">🏢</span> Escritórios</div>
       <div class="nav-item" data-page="audit" id="nav-audit" style="display:none"><span style="width:18px;text-align:center">📋</span> Auditoria</div>
     </div>
     <div style="padding:10px 12px;border-top:0.5px solid #334155">
@@ -609,17 +613,34 @@ tr:hover td{background:#f8fbf9}
     <div class="page-section" id="page-users">
       <div class="topbar"><div class="page-title">Gerenciar Usuários</div></div>
       <div id="invite-section" style="display:none;background:#fff;border:1px solid #e2e8f0;border-left:4px solid #1f7a47;border-radius:12px;padding:20px 24px;margin-bottom:20px">
-        <div style="font-size:13px;font-weight:600;color:#0f172a;margin-bottom:12px">Convidar novo usuário</div>
+        <div style="font-size:13px;font-weight:600;color:#0f172a;margin-bottom:12px">Adicionar usuário ao escritório</div>
         <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
           <div style="flex:1;min-width:220px">
             <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:#64748b;margin-bottom:6px">E-mail</label>
             <input id="invite-email" class="form-input" type="email" placeholder="email@iom.int">
           </div>
-          <button class="btn-add" id="btn-invite" style="padding:12px 24px;white-space:nowrap">✉ Enviar convite</button>
+          <div style="min-width:170px">
+            <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:#64748b;margin-bottom:6px">Escritório</label>
+            <select id="invite-escritorio" class="form-input"></select>
+          </div>
+          <div style="min-width:150px">
+            <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:#64748b;margin-bottom:6px">Papel</label>
+            <select id="invite-role" class="form-input">
+              <option value="visualizador">Visualizador</option><option value="operador">Operador</option><option value="editor">Editor</option>
+            </select>
+          </div>
+          <button class="btn-add" id="btn-invite" style="padding:12px 20px;white-space:nowrap">✉ Enviar convite</button>
+          <button class="btn-cancel" id="btn-vincular" style="padding:12px 20px;white-space:nowrap" title="Para quem já tem conta: apenas vincula, sem enviar e-mail">Vincular existente</button>
         </div>
         <div id="msg-invite" class="msg" style="margin-top:12px"></div>
       </div>
       <div id="users-content"></div>
+    </div>
+
+    <!-- ESCRITÓRIOS (master) -->
+    <div class="page-section" id="page-escritorios">
+      <div class="topbar"><div class="page-title">Escritórios</div><button class="btn-add" id="btn-new-esc">+ Novo escritório</button></div>
+      <div id="escritorios-content"></div>
     </div>
 
     <!-- AUDITORIA -->
@@ -632,6 +653,9 @@ tr:hover td{background:#f8fbf9}
             <option value="registro">Registro</option>
             <option value="edicao">Edição</option>
             <option value="exclusao">Exclusão</option>
+            <option value="login">Login</option>
+            <option value="logout">Logout</option>
+            <option value="timeout">Timeout</option>
           </select>
           <input class="search-input" type="text" placeholder="🔍 Buscar produto..." id="search-audit">
         </div>
@@ -708,22 +732,31 @@ tr:hover td{background:#f8fbf9}
   </div>
 </div>
 
+<!-- MODAL ESCRITÓRIO -->
+<div class="modal-overlay" id="modal-esc">
+  <div class="modal">
+    <div class="modal-title" id="modal-esc-title">Novo escritório</div>
+    <div class="form-group"><label class="form-label">Nome</label><input id="esc-name" class="form-input" placeholder="Ex.: CHA Porto Alegre"></div>
+    <div class="form-group"><label class="form-label">Módulos habilitados</label><div id="esc-modulos" style="display:flex;flex-direction:column;gap:8px"></div></div>
+    <div class="form-group"><label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer"><input type="checkbox" id="esc-ativo" checked style="width:16px;height:16px;accent-color:#1f7a47"> Escritório ativo</label></div>
+    <div class="form-group"><label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer"><input type="checkbox" id="esc-padrao" style="width:16px;height:16px;accent-color:#1f7a47"> Padrão para novos cadastros (entram como visualizador)</label></div>
+    <div class="form-group" id="esc-admin-wrap"><label class="form-label">E-mail do administrador local (opcional)</label><input id="esc-admin-email" class="form-input" type="email" placeholder="usuário já cadastrado"></div>
+    <div class="modal-footer"><button class="btn-cancel" id="btn-cancel-esc">Cancelar</button><button class="btn-save" id="btn-save-esc">Salvar</button></div>
+  </div>
+</div>
+
 <!-- MODAL USUÁRIO -->
 <div class="modal-overlay" id="modal-user">
   <div class="modal">
-    <div class="modal-title">Alterar permissão</div>
+    <div class="modal-title">Alterar acesso</div>
     <div style="margin-bottom:16px;font-size:13px;color:var(--muted)">Usuário: <strong id="modal-user-email" style="color:var(--text)"></strong></div>
-    <div class="form-group"><label class="form-label">Nível de acesso</label>
-      <select id="u-role" class="form-input">
-        <option value="admin">Admin — acesso total</option>
-        <option value="editor">Editor — cadastrar e editar produtos</option>
-        <option value="operador">Operador — apenas entradas e saídas</option>
-        <option value="visualizador">Visualizador — somente consulta</option>
-      </select>
-    </div>
     <div class="form-group">
-      <label class="form-label">Acesso aos escritórios</label>
+      <label class="form-label">Papel em cada escritório</label>
       <div id="u-escritorios-checks" style="display:flex;flex-direction:column;gap:8px;margin-top:4px"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">Admin local: gerencia usuários, limites, relatórios e auditoria do escritório. Editor: produtos e movimentações. Operador: só entradas e saídas. Visualizador: consulta.</div>
+    </div>
+    <div class="form-group" id="u-master-wrap" style="display:none">
+      <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer"><input type="checkbox" id="u-master" style="width:16px;height:16px;accent-color:#1f7a47"> Administrador master (acesso a todos os escritórios)</label>
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" id="btn-cancel-user">Cancelar</button>
@@ -748,7 +781,18 @@ tr:hover td{background:#f8fbf9}
   document.head.appendChild(sdk);
 })();
 function initApp(){
-var escritorios=[], currentEscritorio=null, userEscritorios=[];
+var escritorios=[], currentEscritorio=null, userEscritorios=[], userRoles={};
+var MODULOS=[{id:'estoque',nome:'Estoque',icone:'📦',desc:'Produtos, entradas/saídas, limites e relatórios'}];
+function isMaster(){return !!(currentProfile&&currentProfile.is_master);}
+function effectiveRole(){
+  if(!currentProfile)return 'visualizador';
+  if(isMaster())return 'admin';
+  return (currentEscritorio&&userRoles[currentEscritorio])||'visualizador';
+}
+function isAdminHere(){return effectiveRole()==='admin';}
+function escAtual(){return currentEscritorio?(escritorios.find(function(e){return e.id===currentEscritorio;})||null):null;}
+function moduloAtivo(m){var e=escAtual();if(!e)return true;return (e.modulos||['estoque']).indexOf(m)>=0;}
+function adminOffices(){return isMaster()?escritorios.slice():escritorios.filter(function(e){return userRoles[e.id]==='admin';});}
 const SUPABASE_URL='https://fsdfdrmrmptccudeesbk.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzZGZkcm1ybXB0Y2N1ZGVlc2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODQxMTcsImV4cCI6MjA5MDQ2MDExN30.umM8-OG15FUSZ4YCq8MKLWyiasQunq2LX5tceE1hszI';
 // Envio de email via Edge Function (Brevo)
@@ -772,7 +816,18 @@ function getStatus(qty,productId){
 (function(){var b=document.getElementById('art-bar');if(!b)return;[60,85,40,95,70,55,80,45,90,65,75,50,88,35,72].forEach(function(h,i){var d=document.createElement('div');d.style.cssText='flex:1;height:'+h+'%;background:'+(i%2===0?'#2f9e5e':'#e8a91e')+';opacity:'+(0.4+h/200)+';border-radius:4px 4px 0 0';b.appendChild(d);});})();
 
 function showMsg(id,type,text){var el=document.getElementById(id);if(!el)return;el.className='msg '+type+' show';el.style.display='block';el.textContent=text;setTimeout(function(){el.style.display='none';},4000);}
-function can(action){if(!currentProfile)return false;var r=currentProfile.role;if(r==='admin')return true;if(action==='view')return true;if(action==='movement')return r==='editor'||r==='operador';if(action==='product')return r==='editor';return false;}
+// ── SEGURANÇA: Sanitização contra XSS ──
+function escHTML(str){
+  if(str===null||str===undefined)return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;');
+}
+
+function can(action){if(!currentProfile)return false;var r=effectiveRole();if(r==='admin')return true;if(action==='view')return true;if(action==='movement')return r==='editor'||r==='operador';if(action==='product')return r==='editor';return false;}
 function switchTab(tab){
   document.getElementById('tab-login').style.display=tab==='login'?'':'none';
   document.getElementById('tab-register').style.display=tab==='register'?'':'none';
@@ -797,11 +852,31 @@ function navigateTo(page){
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
   var sec=document.getElementById('page-'+page);if(sec)sec.classList.add('active');
   var nav=document.querySelector('[data-page="'+page+'"]');if(nav)nav.classList.add('active');
-  if(page==='dashboard')loadDashboard();else if(page==='products')loadProducts();else if(page==='movements')loadMovements();else if(page==='config')loadConfig();else if(page==='users')loadUsers();else if(page==='audit')loadAudit();else if(page==='relatorios')loadRelatorios();
+  if(page==='dashboard')loadDashboard();else if(page==='products')loadProducts();else if(page==='movements')loadMovements();else if(page==='config')loadConfig();else if(page==='users')loadUsers();else if(page==='audit')loadAudit();else if(page==='relatorios')loadRelatorios();else if(page==='escritorios')loadEscritoriosPage();
 }
 
+function applyRoleUI(){
+  var _mav=document.getElementById('mobile-avatar');if(_mav&&document.getElementById('user-avatar'))_mav.textContent=document.getElementById('user-avatar').textContent;
+  var er=effectiveRole(), master=isMaster(), adm=er==='admin';
+  var lbl=master?'Master':(er.charAt(0).toUpperCase()+er.slice(1)+(adm?' local':''));
+  document.getElementById('user-role-label').textContent=lbl;
+  function sh(id,v,d){var el=document.getElementById(id);if(el)el.style.display=v?(d||''):'none';}
+  sh('nav-section-admin',adm||master);
+  ['nav-config','nav-users','nav-audit','nav-relatorios'].forEach(function(id){sh(id,adm);});
+  sh('nav-escritorios',master);
+  sh('invite-section',adm,'block');
+  sh('btn-gerar-relatorio',adm,'flex');sh('btn-enviar-relatorio',adm,'flex');
+  sh('btn-new-product',can('product'));
+  sh('btn-new-entrada',can('movement'));sh('btn-new-saida',can('movement'));
+  document.querySelectorAll('.nav-item[data-modulo]').forEach(function(n){
+    if(!moduloAtivo(n.dataset.modulo))n.style.display='none';
+    else if(n.id==='nav-config'||n.id==='nav-users'||n.id==='nav-audit'||n.id==='nav-relatorios')n.style.display=adm?'':'none';
+    else n.style.display='';
+  });
+}
 async function enterApp(user){
   currentUser=user;
+  fetchUserIP(); // buscar IP em background
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
   var res=await sb.from('profiles').select('*').eq('id',user.id).single();
@@ -811,19 +886,13 @@ async function enterApp(user){
   var initials=name.split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
   document.getElementById('user-name').textContent=name.split(' ')[0];
   document.getElementById('user-avatar').textContent=initials;
-  document.getElementById('user-role-label').textContent=currentProfile.role.charAt(0).toUpperCase()+currentProfile.role.slice(1);
-  var mAvatar=document.getElementById('mobile-avatar');
-  if(mAvatar)mAvatar.textContent=initials;
-  if(currentProfile.role==='admin'){document.getElementById('nav-section-admin').style.display='';document.getElementById('nav-config').style.display='';document.getElementById('nav-users').style.display='';document.getElementById('nav-audit').style.display='';document.getElementById('nav-relatorios').style.display='';document.getElementById('invite-section').style.display='block';var btnRel=document.getElementById('btn-gerar-relatorio');if(btnRel)btnRel.style.display='flex';var btnEmail=document.getElementById('btn-enviar-relatorio');if(btnEmail)btnEmail.style.display='flex';}
-  if(can('product'))document.getElementById('btn-new-product').style.display='';
-  if(can('movement')){document.getElementById('btn-new-entrada').style.display='';document.getElementById('btn-new-saida').style.display='';}
   var now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('last-update').textContent='Visão geral do estoque · atualizado às '+now;
   // Carregar escritórios do usuário
   await loadEscritorios();
-  var isAdmin=currentProfile.role==='admin';
+  var isAdmin=isMaster();
   if(isAdmin){
-    // Admin vai direto para seleção com opção "todos"
+    // Master vai direto para seleção com opção "todos"
     mostrarSelecaoEscritorio();
   } else {
     if(userEscritorios.length===0){
@@ -839,18 +908,82 @@ async function enterApp(user){
     }
   }
 }
-function logout(){if(sb)sb.auth.signOut();currentUser=null;currentProfile=null;escritorios=[];currentEscritorio=null;userEscritorios=[];document.getElementById('app-screen').style.display='none';document.getElementById('escritorio-screen').style.display='none';document.getElementById('auth-screen').style.display='flex';}
+// ── TIMEOUT DE SESSÃO ──
+var _sessionTimer=null;
+var SESSION_TIMEOUT=30*60*1000; // 30 minutos de inatividade
+var _lastActivity=Date.now();
+
+function resetActivityTimer(){
+  _lastActivity=Date.now();
+  if(_sessionTimer)clearTimeout(_sessionTimer);
+  _sessionTimer=setTimeout(function(){
+    if(currentUser){
+      console.info('Sessão expirada por inatividade');
+      logAccessEvent('timeout');
+      logout();
+      showMsg('msg-auth','error','Sessão encerrada por inatividade. Faça login novamente.');
+    }
+  },SESSION_TIMEOUT);
+}
+
+function startActivityMonitor(){
+  ['click','keydown','mousemove','touchstart','scroll'].forEach(function(ev){
+    document.addEventListener(ev,resetActivityTimer,{passive:true});
+  });
+  resetActivityTimer();
+}
+
+function stopActivityMonitor(){
+  if(_sessionTimer){clearTimeout(_sessionTimer);_sessionTimer=null;}
+}
+
+// ── LOG DE ACESSO ──
+var _userIP='desconhecido';
+async function fetchUserIP(){
+  try{
+    var r=await fetch('https://api.ipify.org?format=json');
+    var d=await r.json();
+    _userIP=d.ip||'desconhecido';
+  }catch(e){_userIP='desconhecido';}
+}
+
+async function logAccessEvent(action){
+  try{
+    if(!sb||!currentUser)return;
+    var userName=currentProfile?currentProfile.full_name||currentUser.email:currentUser.email;
+    await sb.from('audit_log').insert({
+      action:action,
+      entity:'sessao',
+      entity_id:null,
+      product_name:null,
+      details:{ip:_userIP,user_agent:navigator.userAgent.substring(0,200)},
+      user_id:currentUser.id,
+      user_name:userName,
+      escritorio_id:currentEscritorio||null
+    });
+  }catch(e){console.warn('logAccessEvent error:',e);}
+}
+
+function logout(){
+  logAccessEvent('logout');
+  stopActivityMonitor();
+  if(sb)sb.auth.signOut();
+  currentUser=null;currentProfile=null;escritorios=[];currentEscritorio=null;userEscritorios=[];
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('escritorio-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+}
 
 async function loadEscritorios(){
   var res=await sb.from('escritorios').select('*').order('name');
   escritorios=res.data||[];
-  var isAdmin=currentProfile&&currentProfile.role==='admin';
-  if(isAdmin){
+  var pe=await sb.from('perfil_escritorios').select('escritorio_id,role').eq('perfil_id',currentUser.id);
+  userRoles={};(pe.data||[]).forEach(function(x){userRoles[x.escritorio_id]=x.role;});
+  if(isMaster()){
     userEscritorios=escritorios;
   } else {
-    var pe=await sb.from('perfil_escritorios').select('escritorio_id').eq('perfil_id',currentUser.id);
-    var ids=(pe.data||[]).map(function(x){return x.escritorio_id;});
-    userEscritorios=escritorios.filter(function(e){return ids.includes(e.id);});
+    escritorios=escritorios.filter(function(e){return e.ativo!==false;});
+    userEscritorios=escritorios.filter(function(e){return userRoles[e.id];});
   }
   // Popular selects de escritório nos modais
   var pEsc=document.getElementById('p-escritorio');
@@ -866,7 +999,7 @@ function mostrarSelecaoEscritorio(){
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='none';
   document.getElementById('escritorio-screen').style.display='flex';
-  var isAdmin=currentProfile&&currentProfile.role==='admin';
+  var isAdmin=isMaster();
   var cards=document.getElementById('escritorio-cards');
   cards.innerHTML='';
   var lista=isAdmin?escritorios:userEscritorios;
@@ -874,7 +1007,7 @@ function mostrarSelecaoEscritorio(){
     var card=document.createElement('div');
     card.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s';
     card.innerHTML='<div style="width:52px;height:52px;background:#dbeafe;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:24px">🏢</div>'
-      +'<div style="font-size:15px;font-weight:600;color:#0f172a;margin-bottom:4px">'+e.name+'</div>'
+      +'<div style="font-size:15px;font-weight:600;color:#0f172a;margin-bottom:4px">'+escHTML(e.name)+(e.ativo===false?' <span style="font-size:11px;color:#e0454b">(inativo)</span>':'')+'</div>'
       +'<div style="font-size:12px;color:#64748b" id="card-count-'+e.id+'">Carregando...</div>';
     card.addEventListener('mouseenter',function(){card.style.borderColor='#1f7a47';card.style.transform='translateY(-2px)';});
     card.addEventListener('mouseleave',function(){card.style.borderColor='#e2e8f0';card.style.transform='translateY(0)';});
@@ -893,13 +1026,14 @@ function mostrarSelecaoEscritorio(){
 }
 
 function entrarNoApp(){
+  applyRoleUI();
   document.getElementById('escritorio-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
   var mEscLabel=document.getElementById('mobile-escritorio-label');
   if(mEscLabel){var en=currentEscritorio?(escritorios.find(function(e){return e.id===currentEscritorio;})||{name:''}).name:'Todos';mEscLabel.textContent=en;}
   // Botão trocar na sidebar
   var btnTrocar=document.getElementById('btn-trocar-escritorio');
-  var podeEscolher=currentProfile.role==='admin'||userEscritorios.length>1;
+  var podeEscolher=isMaster()||userEscritorios.length>1;
   if(podeEscolher&&btnTrocar){
     btnTrocar.style.display='block';
     var escNome=currentEscritorio?(escritorios.find(function(e){return e.id===currentEscritorio;})||{name:'Todos'}).name:'Todos';
@@ -914,6 +1048,8 @@ function entrarNoApp(){
   }
   setPeriod('today');
   navigateTo('dashboard');
+  startActivityMonitor();
+  setTimeout(function(){logAccessEvent('login');},1000); // log após IP ser buscado
 }
 
 async function handleLogin(){var email=document.getElementById('login-email').value.trim();var pass=document.getElementById('login-password').value;if(!email||!pass){showMsg('msg-auth','error','Preencha e-mail e senha.');return;}var res=await sb.auth.signInWithPassword({email:email,password:pass});if(res.error){showMsg('msg-auth','error',res.error.message);return;}enterApp(res.data.user);}
@@ -1075,7 +1211,7 @@ function populateChartFilterOptions(){
   var prodSel=document.getElementById('chart-evolution-product');
   var prevProd=prodSel.value;
   var sortedProds=allProducts.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
-  prodSel.innerHTML='<option value="">Todos os produtos</option>'+sortedProds.map(function(p){return '<option value="'+p.id+'">'+p.name+'</option>';}).join('');
+  prodSel.innerHTML='<option value="">Todos os produtos</option>'+sortedProds.map(function(p){return '<option value="'+escHTML(p.id)+'">'+escHTML(p.name)+'</option>';}).join('');
   if(sortedProds.some(function(p){return p.id===prevProd;}))prodSel.value=prevProd;
 }
 
@@ -1310,8 +1446,8 @@ async function loadMovements(){
   var ms=res.data||[];
   var q=document.getElementById('search-movements').value.toLowerCase();
   if(q)ms=ms.filter(function(m){return m.product_name.toLowerCase().includes(q);});
-  var isAdmin=currentProfile&&currentProfile.role==='admin';
-  var showEscCol=isAdmin&&!currentEscritorio;
+  var isAdmin=isAdminHere();
+  var showEscCol=isMaster()&&!currentEscritorio;
   var colSpan=isAdmin?(showEscCol?8:7):(showEscCol?7:6);
   var rows=ms.map(function(m){
     var d=new Date(m.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -1404,33 +1540,101 @@ async function saveConfig(){
   loadDashboard();loadProducts();
 }
 
-// ── USUÁRIOS ──
-async function loadUsers(){
-  if(currentProfile.role!=='admin'){document.getElementById('users-content').innerHTML='<div class="permission-denied"><div class="icon">🔒</div><h3>Acesso restrito</h3></div>';return;}
-  var div=document.getElementById('users-content');div.innerHTML='<div class="loading"><div class="spinner"></div> Carregando...</div>';
-  try{
-  // Garantir que escritórios estão carregados
-  if(!escritorios||!escritorios.length){
-    var er=await sb.from('escritorios').select('*').order('name');
-    escritorios=er.data||[];
+// ── ESCRITÓRIOS (master) ──
+var editingEscId=null;
+async function loadEscritoriosPage(){
+  var div=document.getElementById('escritorios-content');
+  if(!isMaster()){div.innerHTML='<div class="permission-denied"><div class="icon">🔒</div><h3>Acesso restrito ao administrador master</h3></div>';return;}
+  div.innerHTML='<div class="loading"><div class="spinner"></div> Carregando...</div>';
+  var er=await sb.from('escritorios').select('*').order('name');escritorios=er.data||[];
+  var pe=await sb.from('perfil_escritorios').select('escritorio_id,role');
+  var cnt={},adm={};(pe.data||[]).forEach(function(x){cnt[x.escritorio_id]=(cnt[x.escritorio_id]||0)+1;if(x.role==='admin')adm[x.escritorio_id]=(adm[x.escritorio_id]||0)+1;});
+  var rows=escritorios.map(function(e){
+    var mods=(e.modulos||[]).map(function(m){var d=MODULOS.find(function(x){return x.id===m;});return '<span class="badge badge-bom" style="margin-right:4px">'+(d?d.icone+' '+d.nome:escHTML(m))+'</span>';}).join('');
+    return '<tr><td><strong>'+escHTML(e.name)+'</strong>'+(e.padrao?' <span class="badge badge-atencao">Padrão</span>':'')+'</td>'
+      +'<td>'+mods+'</td><td>'+(cnt[e.id]||0)+' ('+(adm[e.id]||0)+' admin)</td>'
+      +'<td>'+(e.ativo===false?'<span class="badge badge-critico">Inativo</span>':'<span class="badge badge-bom">Ativo</span>')+'</td>'
+      +'<td><button class="btn-edit" data-action="edit-esc" data-id="'+e.id+'">Editar</button></td></tr>';
+  }).join('');
+  div.innerHTML='<div class="card"><div style="overflow-x:auto"><table><thead><tr><th>Escritório</th><th>Módulos</th><th>Usuários</th><th>Status</th><th>Ação</th></tr></thead><tbody>'+(rows||'<tr class="empty-row"><td colspan="5">Nenhum escritório.</td></tr>')+'</tbody></table></div></div>';
+  div.querySelector('table').addEventListener('click',function(ev){var b=ev.target.closest('[data-action="edit-esc"]');if(b)openEscModal(b.dataset.id);});
+}
+function openEscModal(id){
+  editingEscId=id||null;
+  var e=id?escritorios.find(function(x){return x.id===id;}):null;
+  document.getElementById('modal-esc-title').textContent=e?'Editar escritório':'Novo escritório';
+  document.getElementById('esc-name').value=e?e.name:'';
+  document.getElementById('esc-ativo').checked=e?e.ativo!==false:true;
+  document.getElementById('esc-padrao').checked=e?!!e.padrao:false;
+  document.getElementById('esc-admin-email').value='';
+  document.getElementById('esc-admin-wrap').style.display='';
+  var mods=e?(e.modulos||[]):['estoque'];
+  var box=document.getElementById('esc-modulos');box.innerHTML='';
+  MODULOS.forEach(function(m){
+    var l=document.createElement('label');l.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer';
+    l.innerHTML='<input type="checkbox" value="'+m.id+'" '+(mods.indexOf(m.id)>=0?'checked':'')+' style="width:16px;height:16px;accent-color:#1f7a47"> <span>'+m.icone+' <strong>'+m.nome+'</strong> <span style="color:#64748b;font-size:12px">— '+m.desc+'</span></span>';
+    box.appendChild(l);
+  });
+  document.getElementById('modal-esc').classList.add('open');
+}
+async function saveEscritorio(){
+  var name=document.getElementById('esc-name').value.trim();
+  if(!name){alert('Informe o nome do escritório.');return;}
+  var mods=[].slice.call(document.querySelectorAll('#esc-modulos input:checked')).map(function(c){return c.value;});
+  var ativo=document.getElementById('esc-ativo').checked,padrao=document.getElementById('esc-padrao').checked;
+  if(padrao&&!ativo){alert('O escritório padrão precisa estar ativo.');return;}
+  if(padrao){var rp=await sb.from('escritorios').update({padrao:false}).eq('padrao',true);if(rp.error){alert('Erro: '+rp.error.message);return;}}
+  var payload={name:name,modulos:mods,ativo:ativo,padrao:padrao},r,newId=editingEscId;
+  if(editingEscId)r=await sb.from('escritorios').update(payload).eq('id',editingEscId);
+  else{r=await sb.from('escritorios').insert(payload).select('id').single();if(r.data)newId=r.data.id;}
+  if(r.error){alert('Erro ao salvar: '+r.error.message);return;}
+  var adm=document.getElementById('esc-admin-email').value.trim();
+  if(adm&&newId){
+    var v=await sb.rpc('vincular_usuario',{p_email:adm,p_escritorio:newId,p_role:'admin'});
+    if(v.error){alert('Escritório salvo, mas o admin local não foi vinculado: '+v.error.message);}
   }
+  logAudit(editingEscId?'edicao':'registro','escritorio',newId,name,{type:'escritorio',qty:'',old_type:'',old_qty:'',new_type:'',new_qty:'',note:'Módulos: '+mods.join(',')});
+  document.getElementById('modal-esc').classList.remove('open');
+  await loadEscritorios();
+  loadEscritoriosPage();
+}
+document.getElementById('btn-new-esc').addEventListener('click',function(){openEscModal(null);});
+document.getElementById('btn-cancel-esc').addEventListener('click',function(){document.getElementById('modal-esc').classList.remove('open');});
+document.getElementById('btn-save-esc').addEventListener('click',saveEscritorio);
+
+// ── USUÁRIOS ──
+var ROLE_LABEL={admin:'Admin local',editor:'Editor',operador:'Operador',visualizador:'Visualizador'};
+async function loadUsers(){
+  if(!isAdminHere()){document.getElementById('users-content').innerHTML='<div class="permission-denied"><div class="icon">🔒</div><h3>Acesso restrito</h3></div>';return;}
+  var div=document.getElementById('users-content');div.innerHTML='<div class="loading"><div class="spinner"></div> Carregando...</div>';
+  // selects do convite
+  var sel=document.getElementById('invite-escritorio');
+  if(sel){sel.innerHTML='';adminOffices().forEach(function(e){var o=document.createElement('option');o.value=e.id;o.textContent=e.name;sel.appendChild(o);});if(currentEscritorio)sel.value=currentEscritorio;}
+  var rsel=document.getElementById('invite-role');
+  if(rsel&&!rsel.querySelector('option[value="admin"]')&&isMaster()){var oa=document.createElement('option');oa.value='admin';oa.textContent='Admin local';rsel.appendChild(oa);}
+  try{
   var res=await sb.from('profiles').select('*').order('created_at');
-  if(res.error){div.innerHTML='<div style="padding:24px;color:#ef4444">Erro ao carregar usuários: '+res.error.message+'</div>';return;}
-  var rows=(res.data||[]).map(function(u){
+  if(res.error){div.innerHTML='<div style="padding:24px;color:#ef4444">Erro ao carregar usuários: '+escHTML(res.error.message)+'</div>';return;}
+  var qpe=sb.from('perfil_escritorios').select('perfil_id,escritorio_id,role');
+  if(currentEscritorio)qpe=qpe.eq('escritorio_id',currentEscritorio);
+  var pr=await qpe;var links=pr.data||[];
+  var users=res.data||[];
+  if(currentEscritorio)users=users.filter(function(u){return links.some(function(l){return l.perfil_id===u.id;});});
+  var rows=users.map(function(u){
     var isSelf=currentUser&&u.id===currentUser.id;
-    var escNome=(escritorios.find(function(e){return e.id===u.escritorio_id;})||{name:'—'}).name;
-    var tr=document.createElement('tr');
-    tr.innerHTML='<td><strong>'+(u.full_name||'-')+'</strong></td>'
-      +'<td style="color:var(--muted);font-size:12px">'+u.email+'</td>'
-      +'<td><span class="badge badge-'+u.role+'">'+u.role+'</span></td>'
-      +'<td style="font-size:12px;color:var(--muted)">'+escNome+'</td>'
+    var chips=links.filter(function(l){return l.perfil_id===u.id;}).map(function(l){
+      var en=(escritorios.find(function(e){return e.id===l.escritorio_id;})||{name:'?'}).name;
+      return '<span class="badge badge-'+l.role+'" style="margin:2px 4px 2px 0">'+escHTML(en)+' · '+ROLE_LABEL[l.role]+'</span>';
+    }).join('')||'<span style="color:var(--muted);font-size:12px">Sem escritório</span>';
+    return '<tr><td><strong>'+escHTML(u.full_name||'-')+'</strong>'+(u.is_master?' <span class="badge badge-admin">Master</span>':'')+'</td>'
+      +'<td style="color:var(--muted);font-size:12px">'+escHTML(u.email)+'</td>'
+      +'<td>'+chips+'</td>'
       +'<td style="color:var(--muted);font-size:12px">'+new Date(u.created_at).toLocaleDateString('pt-BR')+'</td>'
-      +'<td>'+(isSelf?'<span style="font-size:12px;color:var(--muted)">Você</span>':'<button class="btn-edit" data-action="edit-user" data-id="'+u.id+'" data-role="'+u.role+'" data-esc="'+(u.escritorio_id||'')+'" data-email="'+encodeURIComponent(u.email)+'">Alterar</button>')+'</td>';
-    return tr.outerHTML;
-  }).join('');;
-  div.innerHTML='<div class="card"><div style="overflow-x:auto"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Permissão</th><th>Escritório</th><th>Cadastro</th><th>Ação</th></tr></thead><tbody>'+(rows||'<tr class="empty-row"><td colspan="6">Nenhum usuário.</td></tr>')+'</tbody></table></div></div>';
-  div.querySelector('table').addEventListener('click',function(e){var b=e.target.closest('[data-action="edit-user"]');if(!b)return;openEditUser(b.dataset.id,decodeURIComponent(b.dataset.email),b.dataset.role,b.dataset.esc||null);});
-  }catch(err){div.innerHTML='<div style="padding:24px;color:#ef4444">Erro: '+err.message+'</div>';}
+      +'<td>'+(isSelf?'<span style="font-size:12px;color:var(--muted)">Você</span>':'<button class="btn-edit" data-action="edit-user" data-id="'+u.id+'" data-email="'+encodeURIComponent(u.email)+'" data-master="'+(u.is_master?'1':'')+'">Alterar</button>')+'</td></tr>';
+  }).join('');
+  div.innerHTML='<div class="card"><div style="overflow-x:auto"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Escritórios e papéis</th><th>Cadastro</th><th>Ação</th></tr></thead><tbody>'+(rows||'<tr class="empty-row"><td colspan="5">Nenhum usuário.</td></tr>')+'</tbody></table></div></div>';
+  div.querySelector('table').addEventListener('click',function(e){var b=e.target.closest('[data-action="edit-user"]');if(!b)return;openEditUser(b.dataset.id,decodeURIComponent(b.dataset.email),!!b.dataset.master);});
+  }catch(err){div.innerHTML='<div style="padding:24px;color:#ef4444">Erro: '+escHTML(err.message)+'</div>';}
 }
 
 // ── AUTOCOMPLETE CATEGORIA ──
@@ -1540,7 +1744,7 @@ async function saveEditMovement(){
   // Confirmar que foi salvo
   var check=await sb.from('movements').select('qty,type').eq('id',editingMovementId).single();
   if(check.data){
-    console.log('[SALVO] qty='+check.data.qty+' type='+check.data.type);
+    // log removido por segurança
     await logAudit('edicao','movimento',editingMovementId,document.getElementById('em-product').value,{old_type:editingMovementOldType,old_qty:editingMovementOldQty,new_type:newType,new_qty:newQty,note:note});
   }
   // Atualizar estoque
@@ -1606,41 +1810,44 @@ async function deleteMovement(id,productId,type,qty){
 }
 
 // ── MODAL USUÁRIO ──
-async function openEditUser(id,email,role,escId){
+var editingUserLinks={};
+async function openEditUser(id,email,isMasterTarget){
   editingUserId=id;
   document.getElementById('modal-user-email').textContent=email;
-  document.getElementById('u-role').value=role;
-  // Carregar escritórios vinculados ao usuário
-  var pe=await sb.from('perfil_escritorios').select('escritorio_id').eq('perfil_id',id);
-  var linked=(pe.data||[]).map(function(x){return x.escritorio_id;});
+  var pe=await sb.from('perfil_escritorios').select('escritorio_id,role').eq('perfil_id',id);
+  editingUserLinks={};(pe.data||[]).forEach(function(x){editingUserLinks[x.escritorio_id]=x.role;});
   var div=document.getElementById('u-escritorios-checks');
   div.innerHTML='';
-  escritorios.forEach(function(e){
-    var label=document.createElement('label');
-    label.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:13px;color:#0f172a;transition:border-color .15s';
-    var chk=document.createElement('input');
-    chk.type='checkbox';chk.value=e.id;chk.checked=linked.includes(e.id);
-    chk.style.cssText='width:16px;height:16px;accent-color:#1f7a47;cursor:pointer;flex-shrink:0';
-    label.appendChild(chk);
-    label.appendChild(document.createTextNode(e.name));
-    label.addEventListener('mouseenter',function(){label.style.borderColor='#1f7a47';});
-    label.addEventListener('mouseleave',function(){label.style.borderColor='#e2e8f0';});
-    div.appendChild(label);
+  adminOffices().forEach(function(e){
+    var cur=editingUserLinks[e.id]||'';
+    var locked=(cur==='admin'&&!isMaster());
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;color:#0f172a;justify-content:space-between';
+    var opts='<option value="">Sem acesso</option><option value="visualizador">Visualizador</option><option value="operador">Operador</option><option value="editor">Editor</option>'+((isMaster()||cur==='admin')?'<option value="admin">Admin local</option>':'');
+    row.innerHTML='<span>'+escHTML(e.name)+'</span><select class="form-input" data-esc="'+e.id+'" style="width:auto;min-width:150px"'+(locked?' disabled':'')+'>'+opts+'</select>';
+    row.querySelector('select').value=cur;
+    div.appendChild(row);
   });
+  var mw=document.getElementById('u-master-wrap');
+  mw.style.display=isMaster()?'block':'none';
+  document.getElementById('u-master').checked=!!isMasterTarget;
   document.getElementById('modal-user').classList.add('open');
 }
 async function saveUser(){
-  var role=document.getElementById('u-role').value;
-  var res=await sb.from('profiles').update({role:role}).eq('id',editingUserId);
-  if(res.error){alert('Erro ao salvar: '+res.error.message);return;}
-  // Salvar escritórios: remove todos e reinsere os selecionados
-  await sb.from('perfil_escritorios').delete().eq('perfil_id',editingUserId);
-  var checks=document.querySelectorAll('#u-escritorios-checks input:checked');
-  var inserts=[];
-  checks.forEach(function(c){inserts.push({perfil_id:editingUserId,escritorio_id:c.value});});
-  if(inserts.length>0){
-    var ri=await sb.from('perfil_escritorios').insert(inserts);
-    if(ri.error){alert('Erro ao salvar escritórios: '+ri.error.message);return;}
+  var sels=document.querySelectorAll('#u-escritorios-checks select');
+  for(var i=0;i<sels.length;i++){
+    var sel=sels[i];if(sel.disabled)continue;
+    var escId=sel.dataset.esc,val=sel.value,old=editingUserLinks[escId]||'';
+    if(val===old)continue;
+    var r;
+    if(!val)r=await sb.from('perfil_escritorios').delete().eq('perfil_id',editingUserId).eq('escritorio_id',escId);
+    else r=await sb.from('perfil_escritorios').upsert({perfil_id:editingUserId,escritorio_id:escId,role:val},{onConflict:'perfil_id,escritorio_id'});
+    if(r.error){alert('Erro ao salvar: '+r.error.message);return;}
+    logAudit('edicao','usuario',editingUserId,document.getElementById('modal-user-email').textContent,{old_type:old||'sem acesso',old_qty:'',new_type:val||'sem acesso',new_qty:'',note:'Papel no escritório '+escId});
+  }
+  if(isMaster()){
+    var rm=await sb.from('profiles').update({is_master:document.getElementById('u-master').checked}).eq('id',editingUserId);
+    if(rm.error){alert('Erro ao salvar master: '+rm.error.message);return;}
   }
   document.getElementById('modal-user').classList.remove('open');
   loadUsers();
@@ -1661,11 +1868,12 @@ async function logAudit(action,entity,entityId,productName,details){
 }
 
 async function loadAudit(){
-  if(currentProfile.role!=='admin'){document.getElementById('audit-content').innerHTML='<div class="permission-denied"><div class="icon">🔒</div><h3>Acesso restrito</h3></div>';return;}
+  if(!isAdminHere()){document.getElementById('audit-content').innerHTML='<div class="permission-denied"><div class="icon">🔒</div><h3>Acesso restrito</h3></div>';return;}
   var div=document.getElementById('audit-content');
   div.innerHTML='<div class="loading"><div class="spinner"></div> Carregando...</div>';
   try{
     var q=sb.from('audit_log').select('*').order('created_at',{ascending:false}).limit(200);
+    if(currentEscritorio)q=q.eq('escritorio_id',currentEscritorio);
     var actionF=document.getElementById('filter-audit-action').value;
     var searchF=document.getElementById('search-audit').value.toLowerCase();
     if(actionF)q=q.eq('action',actionF);
@@ -1674,8 +1882,8 @@ async function loadAudit(){
     if(searchF)logs=logs.filter(function(l){return(l.product_name||'').toLowerCase().includes(searchF);});
     var rows=logs.map(function(l){
       var d=new Date(l.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      var actionCls=l.action==='registro'?'badge-entrada':l.action==='edicao'?'badge-atencao':'badge-critico';
-      var actionLabel=l.action==='registro'?'Registro':l.action==='edicao'?'Edição':'Exclusão';
+      var actionCls=l.action==='registro'?'badge-entrada':l.action==='edicao'?'badge-atencao':l.action==='exclusao'?'badge-critico':l.action==='login'?'badge-bom':l.action==='logout'?'badge-visualizador':'badge-critico';
+      var actionLabel=l.action==='registro'?'Registro':l.action==='edicao'?'Edição':l.action==='exclusao'?'Exclusão':l.action==='login'?'Login':l.action==='logout'?'Logout':l.action==='timeout'?'Timeout':'Desconhecido';
       var det=l.details||{};
       var detStr='';
       if(l.action==='registro'){
@@ -1684,8 +1892,8 @@ async function loadAudit(){
         detStr='<span style="color:#ef4444">'+det.old_type+' '+det.old_qty+'</span> → <span style="color:#10b981">'+det.new_type+' '+det.new_qty+'</span>'+(det.note?' · Obs: '+det.note:'');
       } else if(l.action==='exclusao'){
         detStr='Tipo: <strong>'+(det.type||'')+'</strong> · Qtd: <strong>'+(det.qty||'')+'</strong>';
-      } else if(l.action==='registro'&&l.entity==='produto'){
-        detStr='Produto cadastrado';
+      } else if(l.action==='login'||l.action==='logout'||l.action==='timeout'){
+        detStr='IP: <strong>'+(det.ip||'—')+'</strong>';
       }
       var escNome=(escritorios.find(function(e){return e.id===l.escritorio_id;})||{name:'—'}).name;
       return '<tr>'
@@ -1705,22 +1913,36 @@ async function loadAudit(){
 // ── CONVITE ──
 async function sendInvite(){
   var email=document.getElementById('invite-email').value.trim();
+  var escId=document.getElementById('invite-escritorio').value;
+  var role=document.getElementById('invite-role').value;
   if(!email){showMsg('msg-invite','error','Digite um e-mail.');return;}
-  if(currentProfile.role!=='admin'){showMsg('msg-invite','error','Apenas o admin pode enviar convites.');return;}
+  if(!escId){showMsg('msg-invite','error','Escolha o escritório.');return;}
+  if(!isAdminHere()){showMsg('msg-invite','error','Sem permissão para enviar convites.');return;}
   var btn=document.getElementById('btn-invite');
   btn.textContent='Enviando...';btn.disabled=true;
-  // Usar OTP (magic link) que é o método que funciona com email corporativo
   var res=await sb.auth.signInWithOtp({email:email,options:{shouldCreateUser:true}});
   btn.textContent='✉ Enviar convite';btn.disabled=false;
   if(res.error){showMsg('msg-invite','error','Erro: '+res.error.message);return;}
-  // Marcar que este email precisa definir senha após primeiro acesso
-  // Guardar no localStorage do admin para processar depois
   var pendingList=JSON.parse(localStorage.getItem('stockoim_pending_setup')||'[]');
   if(!pendingList.includes(email))pendingList.push(email);
   localStorage.setItem('stockoim_pending_setup',JSON.stringify(pendingList));
-  showMsg('msg-invite','success','Convite enviado para '+email+'!');
+  await new Promise(function(r){setTimeout(r,1500);});
+  var v=await sb.rpc('vincular_usuario',{p_email:email,p_escritorio:escId,p_role:role});
+  if(v.error){showMsg('msg-invite','error','Convite enviado, mas não foi possível vincular: '+v.error.message);return;}
+  showMsg('msg-invite','success','Convite enviado para '+email+' e vinculado ao escritório.');
   document.getElementById('invite-email').value='';
-  setTimeout(function(){loadUsers();},1500);
+  setTimeout(function(){loadUsers();},800);
+}
+async function vincularExistente(){
+  var email=document.getElementById('invite-email').value.trim();
+  var escId=document.getElementById('invite-escritorio').value;
+  var role=document.getElementById('invite-role').value;
+  if(!email||!escId){showMsg('msg-invite','error','Informe e-mail e escritório.');return;}
+  var v=await sb.rpc('vincular_usuario',{p_email:email,p_escritorio:escId,p_role:role});
+  if(v.error){showMsg('msg-invite','error',v.error.message);return;}
+  showMsg('msg-invite','success','Usuário vinculado ao escritório.');
+  document.getElementById('invite-email').value='';
+  loadUsers();
 }
 
 
@@ -1930,8 +2152,8 @@ async function enviarRelatorio(){
     var destinatarios=configRes.data&&configRes.data.destinatarios?configRes.data.destinatarios:[];
     // Fallback: se não houver config, envia para admins
     if(!destinatarios.length){
-      var adminsRes=await sb.from('profiles').select('email,full_name').eq('role','admin');
-      destinatarios=(adminsRes.data||[]).map(function(a){return {email:a.email,full_name:a.full_name};});
+      if(currentEscritorio){var adminsRes=await sb.from('perfil_escritorios').select('profiles(email,full_name)').eq('escritorio_id',currentEscritorio).eq('role','admin');
+      destinatarios=(adminsRes.data||[]).filter(function(a){return a.profiles;}).map(function(a){return {email:a.profiles.email,full_name:a.profiles.full_name};});}
     }
     if(!destinatarios.length){alert('Nenhum destinatário configurado. Configure em Relatórios.');return;}
     var adminEmails=destinatarios.map(function(a){return {email:a.email,name:a.full_name||a.email};});
@@ -2217,11 +2439,13 @@ async function loadRelatorios(){
   try{
     // Buscar escritórios e configs
     var escRes=await sb.from('escritorios').select('*').order('name');
-    var escs=escRes.data||[];
+    var escs=(escRes.data||[]).filter(function(e){return currentEscritorio?e.id===currentEscritorio:isMaster()||userRoles[e.id]==='admin';});
     var cfgRes=await sb.from('report_config').select('*');
     var cfgs=cfgRes.data||[];
     // Buscar usuários cadastrados para lista de destinatários
-    var usersRes=await sb.from('profiles').select('id,email,full_name,role').order('full_name');
+    var usersRes=await sb.from('profiles').select('id,email,full_name').order('full_name');
+    var peRes=await sb.from('perfil_escritorios').select('perfil_id,escritorio_id,role');
+    var peAll=peRes.data||[];
     var users=usersRes.data||[];
 
     var html='';
@@ -2233,7 +2457,8 @@ async function loadRelatorios(){
       var destIds=dests.map(function(d){return d.id;});
 
       // Checkboxes de usuários
-      var userChecks=users.map(function(u){
+      var userChecks=users.filter(function(u){return peAll.some(function(x){return x.perfil_id===u.id&&x.escritorio_id===esc.id;});}).map(function(u){
+        u.role=(peAll.find(function(x){return x.perfil_id===u.id&&x.escritorio_id===esc.id;})||{}).role||'visualizador';
         var checked=destIds.includes(u.id)?'checked':'';
         return '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #e6ebe7;border-radius:8px;cursor:pointer;font-size:13px">'
           +'<input type="checkbox" value="'+u.id+'" data-email="'+u.email+'" data-name="'+(u.full_name||u.email)+'" '+checked
@@ -2379,6 +2604,7 @@ document.getElementById('btn-save-config').addEventListener('click',saveConfig);
 document.getElementById('btn-gerar-relatorio').addEventListener('click',gerarRelatorio);
 document.getElementById('btn-enviar-relatorio').addEventListener('click',enviarRelatorio);
 document.getElementById('btn-invite').addEventListener('click',sendInvite);
+document.getElementById('btn-vincular').addEventListener('click',vincularExistente);
 document.getElementById('invite-email').addEventListener('keydown',function(e){if(e.key==='Enter')sendInvite();});
 document.getElementById('btn-trocar-escritorio').addEventListener('click',function(){mostrarSelecaoEscritorio();});
 document.getElementById('btn-ver-todos').addEventListener('click',function(){currentEscritorio=null;entrarNoApp();});
@@ -2429,9 +2655,12 @@ document.getElementById('btn-register').addEventListener('click',handleRegister)
 
 window.addEventListener('load',function(){
   try{
-    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},
+  global:{headers:{'X-Client-Info':'stockoim/1.0'}}
+});
     sb.auth.onAuthStateChange(function(event,session){
-      console.log('[AUTH EVENT]',event,session&&session.user?session.user.email:'');
+      // log removido por segurança
       if(event==='PASSWORD_RECOVERY'){
         document.getElementById('auth-screen').style.display='none';
         document.getElementById('escritorio-screen').style.display='none';
